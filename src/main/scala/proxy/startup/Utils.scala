@@ -5,7 +5,7 @@ import proxy.startup.Gateway.ergoClient
 import Gateway._
 
 object Utils {
-  def execute(configs: Config): Unit ={
+  def execute(configs: Config): Unit = {
     ergoClient.execute((ctx: BlockchainContext) => {
       configs.proxy.toLowerCase match {
         case "gateway" => Gateway.run(ctx)
@@ -13,5 +13,4 @@ object Utils {
       }
     })
   }
-
 }
