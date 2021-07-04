@@ -9,7 +9,7 @@ object Utils {
     ergoClient.execute((ctx: BlockchainContext) => {
       configs.proxy.toLowerCase match {
         case "gateway" => Gateway.run(ctx)
-//        case "susy" => Susy.run(ctx)
+        case "susy" => Susy.run(ctx, configs.tokenRepoTokenId)
       }
     })
   }
