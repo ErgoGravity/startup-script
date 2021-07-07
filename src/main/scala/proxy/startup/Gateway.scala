@@ -127,7 +127,7 @@ object Gateway {
     val feeAmount = 1000000L
     val addressTokenRepo = Address.create(addrEnc.fromProposition(tokenRepoContract.getErgoTree).get.toString)
 
-    def CreateTokenBox(txB: UnsignedTransactionBuilder, numToken: Int, tokenBox: InputBox, addressTokenRepo: Address) = {
+    def CreateTokenBox(txB: UnsignedTransactionBuilder, numToken: Long, tokenBox: InputBox, addressTokenRepo: Address) = {
       txB.outBoxBuilder
         .value(1000000L * numToken)
         .tokens(new ErgoToken(tokenBox.getTokens.get(0).getId, numToken))
@@ -135,7 +135,7 @@ object Gateway {
         .build()
     }
 
-    def CreateChangeBoxes(txB: UnsignedTransactionBuilder, inputFeeBox: InputBox, tokenBox: InputBox, numToken: Int, numTokenBox: Int, feeAmount: Long, ownerAddress: Address): Seq[OutBox] = {
+    def CreateChangeBoxes(txB: UnsignedTransactionBuilder, inputFeeBox: InputBox, tokenBox: InputBox, numToken: Long, numTokenBox: Int, feeAmount: Long, ownerAddress: Address): Seq[OutBox] = {
       val changeTokenBox = txB.outBoxBuilder
         .value(1000000L)
         .tokens(new ErgoToken(tokenBox.getTokens.get(0).getId, tokenBox.getTokens.get(0).getValue - (numToken * numTokenBox)))
@@ -152,7 +152,7 @@ object Gateway {
 
     val numTokenBox = 10
     var outboxes: Seq[OutBox] = List.range(0, numTokenBox).map(x => CreateTokenBox(txB, 100, tokenBox, addressTokenRepo))
-    outboxes = outboxes ++ CreateChangeBoxes(txB, boxFee, tokenBox, 100, numTokenBox, feeAmount, our)
+    outboxes = outboxes ++ CreateChangeBoxes(txB, boxFee, tokenBox, 100L, numTokenBox, feeAmount, our)
     val tx = txB.boxesToSpend(Seq(tokenBox, boxFee).asJava)
       .outputs(outboxes: _*)
       .fee(feeAmount)
@@ -708,14 +708,16 @@ object Gateway {
 
     val boxes = ctx.getUnspentBoxesFor(our).asScala.toList
 
+    println(boxes)
+
     println("\n\t\t\tissuing gravityTokenId:")
-    val gravityTokenId: String = issueNFTToken(prover, boxes, "Gravity_NFT", "Gravity Project: https://gravity.tech/")
+    val gravityTokenId: String = issueNFTToken(prover, boxes, "Gravity_NFT_V0.1", "Gravity Project: https://gravity.tech/")
     println("\n\t\t\tissuing oracleTokenId:")
-    val oracleTokenId: String = issueNFTToken(prover, boxes, "Oracle_NFT", "Gravity Project: https://gravity.tech/")
+    val oracleTokenId: String = issueNFTToken(prover, boxes, "Oracle_NFT_V0.1", "Gravity Project: https://gravity.tech/")
     println("\n\t\t\tissuing pulseTokenId:")
-    val pulseTokenId: String = issueNFTToken(prover, boxes, "Pulse_NFT", "Gravity Project: https://gravity.tech/")
+    val pulseTokenId: String = issueNFTToken(prover, boxes, "Pulse_NFT_V0.1", "Gravity Project: https://gravity.tech/")
     println("\n\t\t\tissuing tokenRepoTokenId:")
-    val tokenRepoTokenId: String = issueToken(prover, boxes, "TokenRepo", "Gravity Project: https://gravity.tech/")
+    val tokenRepoTokenId: String = issueToken(prover, boxes, "TokenRepo_V0.1", "Gravity Project: https://gravity.tech/")
 
     val tokenRepoContract: ErgoContract = ctx.compileContract(
       ConstantsBuilder.create()

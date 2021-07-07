@@ -128,7 +128,7 @@ object Susy {
     val feeAmount = 1000000L
     val addressTokenRepo = Address.create(addrEnc.fromProposition(maintainerRepoContract.getErgoTree).get.toString)
 
-    def CreateMaintainerBox(txB: UnsignedTransactionBuilder, numToken: Int, tokenBox: InputBox, addressTokenRepo: Address) = {
+    def CreateMaintainerBox(txB: UnsignedTransactionBuilder, numToken: Long, tokenBox: InputBox, addressTokenRepo: Address) = {
       txB.outBoxBuilder
         .value(1000000L * numToken)
         .registers(ErgoValue.of(2), ErgoValue.of(0))
@@ -137,7 +137,7 @@ object Susy {
         .build()
     }
 
-    def CreateChangeBoxes(txB: UnsignedTransactionBuilder, inputFeeBox: InputBox, tokenBox: InputBox, numToken: Int, numTokenBox: Int, feeAmount: Long, ownerAddress: Address): Seq[OutBox] = {
+    def CreateChangeBoxes(txB: UnsignedTransactionBuilder, inputFeeBox: InputBox, tokenBox: InputBox, numToken: Long, numTokenBox: Int, feeAmount: Long, ownerAddress: Address): Seq[OutBox] = {
       val changeTokenBox = txB.outBoxBuilder
         .value(1000000L)
         .registers(ErgoValue.of(2), ErgoValue.of(0))
@@ -187,7 +187,7 @@ object Susy {
     val feeAmount = 1000000L
     val addressTokenRepo = Address.create(addrEnc.fromProposition(linkListRepoContract.getErgoTree).get.toString)
 
-    def CreateMaintainerBox(txB: UnsignedTransactionBuilder, numToken: Int, tokenBox: InputBox, addressTokenRepo: Address) = {
+    def CreateMaintainerBox(txB: UnsignedTransactionBuilder, numToken: Long, tokenBox: InputBox, addressTokenRepo: Address) = {
       txB.outBoxBuilder
         .value(1000000L * numToken)
         .tokens(new ErgoToken(linkListTokenId, numToken), new ErgoToken(tokenBox.getTokens.get(0).getId, numToken))
@@ -195,7 +195,7 @@ object Susy {
         .build()
     }
 
-    def CreateChangeBoxes(txB: UnsignedTransactionBuilder, inputFeeBox: InputBox, tokenBox: InputBox, numToken: Int, numTokenBox: Int, feeAmount: Long, ownerAddress: Address): Seq[OutBox] = {
+    def CreateChangeBoxes(txB: UnsignedTransactionBuilder, inputFeeBox: InputBox, tokenBox: InputBox, numToken: Long, numTokenBox: Int, feeAmount: Long, ownerAddress: Address): Seq[OutBox] = {
       val changeTokenBox = txB.outBoxBuilder
         .value(1000000L)
         .tokens(new ErgoToken(linkListTokenId, numToken),
