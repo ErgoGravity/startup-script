@@ -24,7 +24,7 @@ ADD [".", "/StartupScript"]
 WORKDIR /StartupScript
 #COPY --from=builder-front /usr/src/app/build/ ./public/
 RUN sbt assembly
-RUN mv `find . -name startupscript-*.jar` /startup_script.jar
+RUN mv `find . -name StartupScript-*.jar` /startup_script.jar
 CMD ["java", "-jar", "/startup_script.jar"]
 #ENTRYPOINT java -jar /home/ergo/startup_script.jar --proxy gateway
 
