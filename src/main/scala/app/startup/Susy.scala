@@ -1,4 +1,4 @@
-package proxy.startup
+package app.startup
 
 import org.ergoplatform.ErgoAddressEncoder
 import org.ergoplatform.appkit._
@@ -11,18 +11,16 @@ import sigmastate.eval._
 import sigmastate.interpreter.CryptoConstants
 import special.sigma.GroupElement
 import Gateway._
+import app.helpers.Configs
 
 import java.io.PrintWriter
 import java.math.BigInteger
 import scala.collection.JavaConverters._
 
 object Susy {
-  val conf: ErgoToolConfig = ErgoToolConfig.load("test.conf")
-  val nodeConf: ErgoNodeConfig = conf.getNode
-  val ergoClient: ErgoClient = RestApiErgoClient.create(nodeConf)
   val addrEnc = new ErgoAddressEncoder(NetworkType.MAINNET.networkPrefix)
   val secureRandom = new java.security.SecureRandom
-  val our = Address.create("9h6odKstXL1ExJTaPWdrk6d3CVhAJodeFwAnNWKQAVucywRyqrk")
+  val our = Address.create(Configs.ourAddress)
 
   def randBigInt: BigInt = new BigInteger(256, secureRandom)
 
@@ -49,8 +47,7 @@ object Susy {
   }
 
   def issueNFTToken(prover: ErgoProver, boxes: List[InputBox], tokenName: String, tokenDescription: String): String = {
-    ergoClient.execute((ctx: BlockchainContext) => {
-      val feeAmount = 1000000L
+    Configs.ergoClient.execute((ctx: BlockchainContext) => {
 
 
       val txB = ctx.newTxBuilder()
@@ -67,7 +64,7 @@ object Susy {
 
       val tx = txB.boxesToSpend(Seq(box).asJava)
         .outputs(newBox)
-        .fee(feeAmount)
+        .fee(Configs.defaultTxFee)
         .sendChangeTo(our.getErgoAddress)
         .build()
 
@@ -80,8 +77,7 @@ object Susy {
   }
 
   def issueToken(prover: ErgoProver, boxes: List[InputBox], tokenName: String, tokenDescription: String): String = {
-    ergoClient.execute((ctx: BlockchainContext) => {
-      val feeAmount = 1000000L
+    Configs.ergoClient.execute((ctx: BlockchainContext) => {
 
       val txB = ctx.newTxBuilder()
       val box = boxes.filter(box => box.getValue > 1000000L).head
@@ -97,7 +93,7 @@ object Susy {
 
       val tx = txB.boxesToSpend(Seq(box).asJava)
         .outputs(newBox)
-        .fee(feeAmount)
+        .fee(Configs.defaultTxFee)
         .sendChangeTo(our.getErgoAddress)
         .build()
 
@@ -110,7 +106,7 @@ object Susy {
   }
 
   def randomAddr(): Unit = {
-    ergoClient.execute((ctx: BlockchainContext) => {
+    Configs.ergoClient.execute((ctx: BlockchainContext) => {
       val rnd = randBigInt
       println(s"secret: ${rnd.toString(16)}")
       val addr = getProveDlogAddress(rnd, ctx)
@@ -125,7 +121,6 @@ object Susy {
     val boxFee = boxes.filter(box => box.getTokens.size() == 0).head
     val txB = ctx.newTxBuilder()
 
-    val feeAmount = 1000000L
     val addressTokenRepo = Address.create(addrEnc.fromProposition(maintainerRepoContract.getErgoTree).get.toString)
 
     def CreateMaintainerBox(txB: UnsignedTransactionBuilder, numToken: Long, tokenBox: InputBox, addressTokenRepo: Address) = {
@@ -156,10 +151,10 @@ object Susy {
 
     val numTokenBox = 10
     var outboxes: Seq[OutBox] = List.range(0, numTokenBox).map(x => CreateMaintainerBox(txB, 100, tokenBox, addressTokenRepo))
-    outboxes = outboxes ++ CreateChangeBoxes(txB, boxFee, tokenBox, 100, numTokenBox, feeAmount, our)
+    outboxes = outboxes ++ CreateChangeBoxes(txB, boxFee, tokenBox, 100, numTokenBox, Configs.defaultTxFee, our)
     val tx = txB.boxesToSpend(Seq(tokenBox, boxFee).asJava)
       .outputs(outboxes: _*)
-      .fee(feeAmount)
+      .fee(Configs.defaultTxFee)
       .sendChangeTo(our.getErgoAddress)
       .build()
 
@@ -184,7 +179,6 @@ object Susy {
     val boxFee = boxes.filter(box => box.getTokens.size() == 0).head
     val txB = ctx.newTxBuilder()
 
-    val feeAmount = 1000000L
     val addressTokenRepo = Address.create(addrEnc.fromProposition(linkListRepoContract.getErgoTree).get.toString)
 
     def CreateMaintainerBox(txB: UnsignedTransactionBuilder, numToken: Long, tokenBox: InputBox, addressTokenRepo: Address) = {
@@ -213,10 +207,10 @@ object Susy {
 
     val numTokenBox = 10
     var outboxes: Seq[OutBox] = List.range(0, numTokenBox).map(x => CreateMaintainerBox(txB, 100, tokenBox, addressTokenRepo))
-    outboxes = outboxes ++ CreateChangeBoxes(txB, boxFee, tokenBox, 100, numTokenBox, feeAmount, our)
+    outboxes = outboxes ++ CreateChangeBoxes(txB, boxFee, tokenBox, 100, numTokenBox, Configs.defaultTxFee, our)
     val tx = txB.boxesToSpend(Seq(tokenBox, boxFee).asJava)
       .outputs(outboxes: _*)
-      .fee(feeAmount)
+      .fee(Configs.defaultTxFee)
       .sendChangeTo(our.getErgoAddress)
       .build()
 
@@ -235,7 +229,7 @@ object Susy {
   }
 
   def runLUPort(ctx: BlockchainContext, tokenRepoTokenId: String): Unit = {
-    val secret = BigInt("a73febe82f334157832ea12ed92e0a4969bb52534e2cc03daec6b94bc0c13cd6", 16)
+    val secret = BigInt(Configs.proverSecret, 16)
     val prover = ctx.newProverBuilder()
       .withDLogSecret(secret.bigInteger)
       .build()
