@@ -1,6 +1,5 @@
-package proxy.startup
+package app.startup
 
-import helpers.Utils
 import scopt.OptionParser
 
 case class Config(
