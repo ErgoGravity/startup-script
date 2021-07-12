@@ -14,6 +14,21 @@ import java.util.List;
  */
 public interface BlockchainContext {
     /**
+     * Creates a new PreHeader based on this blockchain context.
+     * The header of the last block is used to derive default values for the new PreHeader.
+     *
+     * @return builder which can be used to set all properties of the new pre-header
+     */
+    PreHeaderBuilder createPreHeader();
+
+    /**
+     * Parses the given json string and create a {@link SignedTransaction} instance.
+     * Should be inverse to {@link SignedTransaction#toJson(boolean)} i.e. preserve
+     * {@code signedTxFromJson(signed.toJson(false)).toJson(false) == signed.toJson(false)}
+     */
+    SignedTransaction signedTxFromJson(String json);
+
+    /**
      * Creates a new builder of unsigned transaction.
      * A new builder is created for every call.
      */
@@ -56,8 +71,6 @@ public interface BlockchainContext {
      */
     String sendTransaction(SignedTransaction tx);
 
-    SignedTransaction signedTxFromJson(String json);
-
     ErgoWallet getWallet();
 
     ErgoContract newContract(Values.ErgoTree ergoTree);
@@ -68,10 +81,5 @@ public interface BlockchainContext {
      * Get unspent boxes owned by the given address
      */
     List<InputBox> getUnspentBoxesFor(Address address);
-
-    /**
-     * Get unspent boxes protected by given ergo tree template
-     */
-    List<InputBox> getUnspentBoxesForErgoTreeTemplate(ErgoTreeTemplate template);
 }
 

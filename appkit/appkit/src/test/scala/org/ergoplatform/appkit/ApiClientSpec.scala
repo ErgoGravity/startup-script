@@ -1,16 +1,12 @@
 package org.ergoplatform.appkit
 
-import okhttp3.mockwebserver.{MockResponse, MockWebServer}
-import org.ergoplatform.Height
 import org.ergoplatform.appkit.examples.ExampleScenarios
-import org.ergoplatform.appkit.impl.ErgoTreeContract
+import org.ergoplatform.appkit.testing.AppkitTesting
 import org.ergoplatform.settings.ErgoAlgos
 import org.ergoplatform.validation.ValidationRules
 import org.scalatest.{Matchers, PropSpec}
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
-import scalan.util.FileUtil._
-import sigmastate.{BoolToSigmaProp, LT, SInt}
-import sigmastate.Values.{ConstantPlaceholder, IntConstant, SigmaPropConstant}
+import sigmastate.Values.SigmaPropConstant
 import sigmastate.serialization.ErgoTreeSerializer
 
 class ApiClientSpec
@@ -30,7 +26,7 @@ class ApiClientSpec
     val tree = ErgoTreeSerializer.DefaultSerializer.deserializeErgoTree(treeBytes)
     println(tree)
     val newBytes = ErgoTreeSerializer.DefaultSerializer.substituteConstants(
-      treeBytes, positions = Array(1), newVals = Array(SigmaPropConstant(masterKey.key.publicImage)))
+      treeBytes, positions = Array(1), newVals = Array(SigmaPropConstant(masterKey.publicImage)))
     val newTree = ErgoTreeSerializer.DefaultSerializer.deserializeErgoTree(newBytes)
     println(newTree)
     println(ErgoAlgos.encode(newBytes))

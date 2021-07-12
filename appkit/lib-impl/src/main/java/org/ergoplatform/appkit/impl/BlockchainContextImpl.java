@@ -4,21 +4,21 @@ import com.google.gson.Gson;
 import org.ergoplatform.ErgoLikeTransaction;
 import org.ergoplatform.appkit.*;
 import org.ergoplatform.explorer.client.ExplorerApiClient;
-import org.ergoplatform.explorer.client.model.TransactionOutput;
+import org.ergoplatform.explorer.client.model.OutputInfo;
 import org.ergoplatform.restapi.client.*;
 import retrofit2.Retrofit;
-import scorex.util.encode.Base16;
 import sigmastate.Values;
+import special.sigma.Header;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class BlockchainContextImpl implements BlockchainContext {
 
     private final ApiClient _client;
     private final Retrofit _retrofit;
+    final PreHeaderImpl _preHeader;
     private ExplorerApiClient _explorer;
     private Retrofit _retrofitExplorer;
     private final NetworkType _networkType;
@@ -38,6 +38,21 @@ public class BlockchainContextImpl implements BlockchainContext {
         _networkType = networkType;
         _nodeInfo = nodeInfo;
         _headers = headers;
+        Header h = ScalaBridge.isoBlockHeader().to(_headers.get(0));
+        _preHeader = new PreHeaderImpl(JavaHelpers.toPreHeader(h));
+    }
+
+    @Override
+    public PreHeaderBuilder createPreHeader() {
+        return new PreHeaderBuilderImpl(this);
+    }
+
+    @Override
+    public SignedTransaction signedTxFromJson(String json) {
+        Gson gson = getApiClient().getGson();
+        ErgoTransaction txData = gson.fromJson(json, ErgoTransaction.class);
+        ErgoLikeTransaction tx = ScalaBridge.isoErgoTransaction().to(txData);
+        return new SignedTransactionImpl(this, tx, 0);
     }
 
     @Override
@@ -82,22 +97,23 @@ public class BlockchainContextImpl implements BlockchainContext {
         return _client;
     }
 
-    /** This method should be private. No classes of HTTP client should ever leak into interfaces. */
-    private List<InputBox> getInputBoxes(List<TransactionOutput> boxes) {
+    /**
+     * This method should be private. No classes of HTTP client should ever leak into interfaces.
+     */
+    private List<InputBox> getInputBoxes(List<OutputInfo> boxes) {
         return boxes.stream().map(box -> {
-            String boxId = box.getId();
+            String boxId = box.getBoxId();
             ErgoTransactionOutput boxInfo = ErgoNodeFacade.getBoxById(_retrofit, boxId);
-            try {
-                return new InputBoxImpl(this, boxInfo);
-            } catch (Exception ex) {
-                System.err.println("exception in getting utxo, maybe spent!: " + ex.getMessage());
-                return null;
-            }
-        }).filter(Objects::nonNull).collect(Collectors.toList());
+            return new InputBoxImpl(this, boxInfo);
+        }).collect(Collectors.toList());
     }
 
     public NodeInfo getNodeInfo() {
         return _nodeInfo;
+    }
+
+    public org.ergoplatform.appkit.PreHeader getPreHeader() {
+        return _preHeader;
     }
 
     public List<BlockHeader> getHeaders() {
@@ -123,14 +139,6 @@ public class BlockchainContextImpl implements BlockchainContext {
     }
 
     @Override
-    public SignedTransaction signedTxFromJson(String json) {
-        Gson gson = getApiClient().getGson();
-        ErgoTransaction txData = gson.fromJson(json, ErgoTransaction.class);
-        ErgoLikeTransaction tx = ScalaBridge.isoErgoTransaction().to(txData);
-        return new SignedTransactionImpl(this, tx);
-    }
-
-    @Override
     public ErgoWallet getWallet() {
         if (_wallet == null) {
             List<WalletBox> unspentBoxes = ErgoNodeFacade.getWalletUnspentBoxes(_retrofit, 0, 0);
@@ -152,16 +160,8 @@ public class BlockchainContextImpl implements BlockchainContext {
 
     @Override
     public List<InputBox> getUnspentBoxesFor(Address address) {
-        List<TransactionOutput> boxes = ExplorerFacade
+        List<OutputInfo> boxes = ExplorerFacade
                 .transactionsBoxesByAddressUnspentIdGet(_retrofitExplorer, address.toString());
-        return getInputBoxes(boxes);
-    }
-
-    @Override
-    public List<InputBox> getUnspentBoxesForErgoTreeTemplate(ErgoTreeTemplate template) {
-        List<TransactionOutput> boxes = ExplorerFacade
-                .transactionsBoxesByErgoTreeTemplateUnspentErgoTreeTemplateGet(_retrofitExplorer,
-                        template.getEncodedBytes());
         return getInputBoxes(boxes);
     }
 }

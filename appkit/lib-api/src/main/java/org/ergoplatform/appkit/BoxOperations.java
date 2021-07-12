@@ -1,9 +1,12 @@
 package org.ergoplatform.appkit;
 
+import org.ergoplatform.P2PKAddress;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import static com.google.common.base.Preconditions.checkState;
 import static org.ergoplatform.appkit.Parameters.MinFee;
 
 /**
@@ -14,48 +17,15 @@ public class BoxOperations {
     public static List<InputBox> selectTop(
             List<InputBox> unspentBoxes,
             long amountToSpend) {
-        return selectTop(unspentBoxes, amountToSpend, Optional.empty());
+        return selectTop(unspentBoxes, amountToSpend, new ArrayList<>());
     }
 
     public static List<InputBox> selectTop(
             List<InputBox> unspentBoxes,
             long amountToSpend,
-            Optional<ErgoToken> tokenOpt) {
-        if (amountToSpend == 0 && !tokenOpt.isPresent()) {
-            // all unspent boxes are requested
-            return unspentBoxes;
-        }
-
-        // collect boxes to cover requested amount of coins and tokens
-        ArrayList<InputBox> res = new ArrayList<InputBox>();
-        long collected = 0;
-        long collectedTokens = 0;
-        long tokenAmount = tokenOpt.map(ErgoToken::getValue).orElse(0L);
-        for (int i = 0;
-             i < unspentBoxes.size() &&
-                     (collected < amountToSpend ||
-                             (tokenOpt.isPresent() && collectedTokens < tokenAmount)
-                     );
-             ++i) {
-            InputBox box = unspentBoxes.get(i);
-            if (!tokenOpt.isPresent() && !box.getTokens().isEmpty()) {
-                // skip boxes with tokens if token is not asked
-                continue;
-            }
-            collected += box.getValue();
-            long tokenAmountInBox = box.getTokens().stream()
-                    .filter(t -> tokenOpt.isPresent() && t.getId().equals(tokenOpt.get().getId()))
-                    .map(ErgoToken::getValue)
-                    .reduce(0L, Long::sum);
-            collectedTokens += tokenAmountInBox;
-            res.add(box);
-        }
-        if (collected < amountToSpend)
-            throw new RuntimeException("Not enough coins in boxes to pay " + amountToSpend);
-        if (tokenOpt.isPresent() && collectedTokens < tokenAmount)
-            throw new RuntimeException("Not enough tokens (id " + tokenOpt.get().getId().toString() + ") in" +
-                    " boxes to pay " + tokenAmount + ", found only " + collectedTokens);
-        return res;
+            List<ErgoToken> tokensToSpend) {
+        List<InputBox> found = BoxSelectorsJavaHelpers.selectBoxes(unspentBoxes, amountToSpend, tokensToSpend);
+        return found;
     }
 
     public static ErgoProver createProver(BlockchainContext ctx, Mnemonic mnemonic) {
@@ -78,11 +48,26 @@ public class BoxOperations {
         return proverB;
     }
 
+    /**
+     * Send the given `amountToSend` to the recipient from either the MASTER address of the
+     * given prover or from the EIP-3 addresses.
+     * All the derived EIP-3 addresses of the prover can be used to collect unspent boxes.
+     *
+     * @param ctx              blockchain context obtained from {@link ErgoClient}
+     * @param senderProver     prover which is used to sign transaction
+     * @param useEip3Addresses true if EIP-3 addresses of the prover should be used to
+     *                         withdraw funds (use false for backwards compatibility)
+     * @param recipient        the recipient address
+     * @param amountToSend     amount of NanoErgs to send
+     */
     public static String send(
-            BlockchainContext ctx, ErgoProver senderProver, Address recipient, long amountToSend) {
+        BlockchainContext ctx,
+        ErgoProver senderProver, boolean useEip3Addresses,
+        Address recipient, long amountToSend) {
 
         ErgoContract pkContract = ErgoContracts.sendToPK(ctx, recipient);
-        SignedTransaction signed = putToContractTx(ctx, senderProver, pkContract, amountToSend);
+        SignedTransaction signed = putToContractTx(ctx, senderProver, useEip3Addresses,
+            pkContract, amountToSend);
         ctx.sendTransaction(signed);
         return signed.toJson(true);
     }
@@ -93,11 +78,32 @@ public class BoxOperations {
         return selected;
     }
 
-    public static SignedTransaction putToContractTx(
-            BlockchainContext ctx, ErgoProver senderProver, ErgoContract contract, long amountToSend) {
-        Address sender = senderProver.getAddress();
-        List<InputBox> boxesToSpend = loadTop(ctx, sender, amountToSend + MinFee);
+    public static List<InputBox> loadTop(BlockchainContext ctx, List<Address> senderAddresses, long amount) {
+        List<InputBox> unspentBoxes = new ArrayList<>();
+        for (Address sender : senderAddresses) {
+            List<InputBox> unspent = ctx.getUnspentBoxesFor(sender);
+            unspentBoxes.addAll(unspent);
+        }
+        List<InputBox> selected = selectTop(unspentBoxes, amount);
+        return selected;
+    }
 
+    public static SignedTransaction putToContractTx(
+            BlockchainContext ctx,
+            ErgoProver senderProver, boolean useEip3Addresses,
+            ErgoContract contract, long amountToSend) {
+        List<Address> senders = new ArrayList<>();
+        if (useEip3Addresses) {
+            List<Address> eip3Addresses = senderProver.getEip3Addresses();
+            checkState(eip3Addresses.size() > 0,
+              "EIP-3 addresses are not derived in the prover (use ErgoProverBuilder.withEip3Secret)");
+            senders.addAll(eip3Addresses);
+        } else {
+            senders.add(senderProver.getAddress());
+        }
+        List<InputBox> boxesToSpend = loadTop(ctx, senders, amountToSend + MinFee);
+
+        P2PKAddress changeAddress = (useEip3Addresses) ? senderProver.getEip3Addresses().get(0).asP2PK() : senderProver.getP2PKAddress();
         UnsignedTransactionBuilder txB = ctx.newTxBuilder();
         OutBox newBox = txB.outBoxBuilder()
                 .value(amountToSend)
@@ -106,7 +112,7 @@ public class BoxOperations {
         UnsignedTransaction tx = txB.boxesToSpend(boxesToSpend)
                 .outputs(newBox)
                 .fee(Parameters.MinFee)
-                .sendChangeTo(senderProver.getP2PKAddress())
+                .sendChangeTo(changeAddress)
                 .build();
 
         SignedTransaction signed = senderProver.sign(tx);

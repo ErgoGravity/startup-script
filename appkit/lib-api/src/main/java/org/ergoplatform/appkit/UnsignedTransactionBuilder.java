@@ -17,6 +17,22 @@ import java.util.List;
  */
 public interface UnsignedTransactionBuilder {
     /**
+     * Specifies {@link PreHeader} instance to be used for transaction signing.
+     */
+    UnsignedTransactionBuilder preHeader(PreHeader ph);
+
+    /**
+     * Specifies boxes that will be spent by the transaction when it will be included in a block.
+     *
+     * @param boxes list of boxes to be spent by the transaction. The boxes can either be
+     *              {@link BlockchainContext#getBoxesById(String...) obtained} from context of created from
+     *               scratch
+     *              as {@link OutBox} and then {@link OutBox#convertToInputWith(String, short) converted} to
+     *              {@link InputBox}.
+     */
+    UnsignedTransactionBuilder boxesToSpend(List<InputBox> boxes);
+
+    /**
      * Specifies boxes that will be used as data-inputs by the transaction when it will be included in a block.
      *
      * @param boxes list of boxes to be used as data-inputs by the transaction. The boxes can either be
@@ -28,37 +44,43 @@ public interface UnsignedTransactionBuilder {
     UnsignedTransactionBuilder withDataInputs(List<InputBox> boxes);
 
     /**
-     * Specifies boxes that will be spent by the transaction when it will be included in a block.
-     *
-     * @param boxes list of boxes to be spent by the transaction. The boxes can either be
-     *              {@link BlockchainContext#getBoxesById(String...) obtained} from context of created from scratch
-     *              as {@link OutBox} and then {@link OutBox#convertToInputWith(String, short) converted} to
-     *              {@link InputBox}.
-     */
-    UnsignedTransactionBuilder boxesToSpend(List<InputBox> boxes);
-
-    /**
      * Specifies output boxes of the transaction. After this transaction is
      * {@link UnsignedTransactionBuilder#build() built}, {@link ErgoProver#sign(UnsignedTransaction)} signed,
-     * {@link BlockchainContext#sendTransaction(SignedTransaction) sent} to the node and included into a next block
+     * {@link BlockchainContext#sendTransaction(SignedTransaction) sent} to the node and included into a
+     * next block
      * the output boxes will be put in the UTXO set.
      *
      * @param outputs output boxes created by the transaction
      */
     UnsignedTransactionBuilder outputs(OutBox... outputs);
 
-
     /**
      * Adds transaction fee output.
+     *
      * @param feeAmount transaction fee amount in NanoErgs
      */
     UnsignedTransactionBuilder fee(long feeAmount);
 
     /**
+     * Configures amounts for tokens to be burnt.
+     * Each Ergo box can store zero or more tokens (aka assets).
+     * In contrast to strict requirement on ERG balance between transaction inputs and outputs,
+     * the amounts of output tokens can be less then the amounts of input tokens.
+     * This is interpreted as token burning i.e. reducing the total amount of tokens in
+     * circulation in the blockchain.
+     * Note, once issued/burnt, the amount of tokens in circulation cannot be increased.
+     *
+     * @param tokens one or more tokens to be burnt as part of the transaction.
+     * @see ErgoToken
+     */
+    UnsignedTransactionBuilder tokensToBurn(ErgoToken... tokens);
+
+    /**
      * Adds change output to the specified address if needed.
+     *
      * @param address address to send output
      */
-    UnsignedTransactionBuilder sendChangeTo(ErgoAddress address, ErgoValue<?>... registers);
+    UnsignedTransactionBuilder sendChangeTo(ErgoAddress address);
 
     /**
      * Builds a new unsigned transaction in the {@link BlockchainContext context} inherited from this builder.
@@ -72,8 +94,12 @@ public interface UnsignedTransactionBuilder {
      */
     BlockchainContext getCtx();
 
+    /** Returns current (either default of configured) pre-header. */
+    PreHeader getPreHeader();
+
     /**
-     * Returns the network type of the blockchain represented by the {@link UnsignedTransactionBuilder#getCtx()
+     * Returns the network type of the blockchain represented by the
+     *  {@link UnsignedTransactionBuilder#getCtx()
      * context} of this builder.
      */
     NetworkType getNetworkType();

@@ -2,12 +2,11 @@ package org.ergoplatform.restapi.client;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonParseException;
+import com.google.gson.JsonElement;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
-
-import java.net.Proxy;
 import java.time.format.DateTimeFormatter;
 import retrofit2.Converter;
 import retrofit2.Retrofit;
@@ -22,6 +21,7 @@ import java.lang.reflect.Type;
 import java.text.DateFormat;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.HashMap;
 
 public class ApiClient {
 
@@ -94,12 +94,9 @@ public class ApiClient {
     this(hostUrl, authName);
   }
 
-  public void createDefaultAdapter(Proxy proxy) {
+  public void createDefaultAdapter() {
     json = new JSON();
     okBuilder = new OkHttpClient.Builder();
-    if (proxy != null) {
-      okBuilder = okBuilder.proxy(proxy);
-    }
 
     if (!_hostUrl.endsWith("/"))
       _hostUrl = _hostUrl + "/";
@@ -109,20 +106,6 @@ public class ApiClient {
       .baseUrl(_hostUrl)
       .addConverterFactory(ScalarsConverterFactory.create())
       .addConverterFactory(GsonCustomConverterFactory.create(json.getGson()));
-  }
-
-  public void createDefaultAdapter() {
-    json = new JSON();
-    okBuilder = new OkHttpClient.Builder();
-
-    if (!_hostUrl.endsWith("/"))
-      _hostUrl = _hostUrl + "/";
-
-    adapterBuilder = new Retrofit
-            .Builder()
-            .baseUrl(_hostUrl)
-            .addConverterFactory(ScalarsConverterFactory.create())
-            .addConverterFactory(GsonCustomConverterFactory.create(json.getGson()));
   }
 
   public <S> S createService(Class<S> serviceClass) {

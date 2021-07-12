@@ -6,11 +6,10 @@ import org.ergoplatform.ErgoLikeTransaction;
 import org.ergoplatform.Input;
 import org.ergoplatform.appkit.InputBox;
 import org.ergoplatform.appkit.Iso;
+import org.ergoplatform.appkit.SignedInput;
 import org.ergoplatform.appkit.SignedTransaction;
 import org.ergoplatform.restapi.client.ErgoTransaction;
 import org.ergoplatform.restapi.client.JSON;
-import org.ergoplatform.settings.ErgoAlgos;
-import scala.collection.Seq;
 import sigmastate.Values;
 
 import java.util.List;
@@ -20,10 +19,12 @@ public class SignedTransactionImpl implements SignedTransaction {
 
     private final BlockchainContextImpl _ctx;
     private final ErgoLikeTransaction _tx;
+    private final int _txCost;
 
-    public SignedTransactionImpl(BlockchainContextImpl ctx, ErgoLikeTransaction tx) {
+    public SignedTransactionImpl(BlockchainContextImpl ctx, ErgoLikeTransaction tx, int txCost) {
         _ctx = ctx;
         _tx = tx;
+        _txCost = txCost;
     }
 
     /**
@@ -31,11 +32,6 @@ public class SignedTransactionImpl implements SignedTransaction {
      */
     public ErgoLikeTransaction getTx() {
         return _tx;
-    }
-
-    @Override
-    public Seq<Input> getInputBoxes() {
-        return _tx.inputs();
     }
 
     @Override
@@ -50,16 +46,29 @@ public class SignedTransactionImpl implements SignedTransaction {
 
     @Override
     public String toJson(boolean prettyPrint) {
-        ErgoTransaction tx = ScalaBridge.isoErgoTransaction().from(_tx);
-        if (prettyPrint) {
-            tx.getOutputs().forEach(o -> {
-                Values.ErgoTree tree = ScalaBridge.isoStringToErgoTree().to(o.getErgoTree());
-                o.ergoTree(tree.toString());
-            });
-        }
-        Gson gson = prettyPrint ? JSON.createGson().setPrettyPrinting().create() : _ctx.getApiClient().getGson();
-        String json = gson.toJson(tx);
-        return json;
+        return toJson(prettyPrint, true);
+    }
+
+    @Override
+    public String toJson(boolean prettyPrint, boolean formatJson) {
+    	ErgoTransaction tx = ScalaBridge.isoErgoTransaction().from(_tx);
+    	if (prettyPrint) {
+    		tx.getOutputs().forEach(o -> {
+    			Values.ErgoTree tree = ScalaBridge.isoStringToErgoTree().to(o.getErgoTree());
+    			o.ergoTree(tree.toString());
+    		});
+    	}
+    	Gson gson = (prettyPrint || formatJson) ? JSON.createGson().setPrettyPrinting().create() : _ctx.getApiClient().getGson();
+    	String json = gson.toJson(tx);
+    	return json;
+    }
+
+    @Override
+    public List<SignedInput> getSignedInputs() {
+        List<Input> inputs = Iso.JListToIndexedSeq(Iso.<Input>identityIso()).from(_tx.inputs());
+        List<SignedInput> res = inputs.stream()
+                .map(input -> (SignedInput)new SignedInputImpl(this, input)).collect(Collectors.toList());
+        return res;
     }
 
     @Override
@@ -68,5 +77,10 @@ public class SignedTransactionImpl implements SignedTransaction {
         List<InputBox> res = outputs.stream()
           .map(ergoBox -> (InputBox)new InputBoxImpl(_ctx, ergoBox)).collect(Collectors.toList());
         return res;
+    }
+
+    @Override
+    public int getCost() {
+        return _txCost;
     }
 }

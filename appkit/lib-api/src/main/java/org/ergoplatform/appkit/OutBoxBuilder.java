@@ -38,6 +38,17 @@ public interface OutBoxBuilder {
     OutBoxBuilder tokens(ErgoToken... tokens);
 
     /**
+     * Mints new token according to https://github.com/ergoplatform/eips/blob/master/eip-0004.md
+     *
+     * @param token token to mint
+     * @param tokenName token verbose name
+     * @param tokenDescription token description
+     * @param tokenNumberOfDecimals number of decimals
+     * @see ErgoToken
+     */
+    OutBoxBuilder mintToken(ErgoToken token, String tokenName, String tokenDescription,int tokenNumberOfDecimals);
+
+    /**
      * Configures one or more optional registers of the output box.
      * Each box have 4 mandatory registers holding value of NanoErgs, guarding script,
      * tokens, creation info.
@@ -49,6 +60,16 @@ public interface OutBoxBuilder {
      * @see org.ergoplatform.ErgoBox.NonMandatoryRegisterId
      */
     OutBoxBuilder registers(ErgoValue<?>... registers);
+
+    /**
+     * Configure the height when the transaction containing the box was created.
+     * This height, when explicitly specified, should not exceed height of the block,
+     * containing the transaction with this output box.
+     * By default, when this method is not used, the creationHeight is taken from the
+     * current {@link BlockchainContext} instance used by this builder.
+     * @param height specified block height
+     */
+    OutBoxBuilder creationHeight(int height);
 
     /**
      * Creates {@link OutBox} instance using specified parameters.
