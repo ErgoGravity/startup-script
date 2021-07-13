@@ -15,11 +15,6 @@ object ErgoExecutor extends App {
       .text("gateway or susy")
       .required()
 
-    opt[String]('t', "tokenRepoTokenId")
-      .action((x, c) => c.copy(tokenRepoTokenId = x))
-      .text("tokenRepoTokenId made in the gateway, In susy case, you should have one")
-      .optional()
-
     help("help").text("prints this usage text")
   }
 

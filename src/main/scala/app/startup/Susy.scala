@@ -627,12 +627,13 @@ object Susy {
 
   }
 
-  def run(ctx: BlockchainContext, tokenRepoTokenId: String): Unit = {
+  def run(ctx: BlockchainContext): Unit = {
+
     println("\n\t\t\tLUPort:")
-    runLUPort(ctx, tokenRepoTokenId)
+    runLUPort(ctx, Configs.tokenRepoTokenId)
 
     println("\n\t\t\tIBPort:")
-    runIBPort(ctx, tokenRepoTokenId)
+    runIBPort(ctx, Configs.tokenRepoTokenId)
 
   }
 }

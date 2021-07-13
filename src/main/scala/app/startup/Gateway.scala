@@ -44,10 +44,9 @@ object Gateway {
     Configs.addressEncoder.fromProposition(contract.getErgoTree).get.toString
   }
 
-  def issueNFTToken(prover: ErgoProver, boxes: List[InputBox], tokenName: String, tokenDescription: String): String = {
+  def issueNFTToken(prover: ErgoProver, box: InputBox, tokenName: String, tokenDescription: String): String = {
     Configs.ergoClient.execute((ctx: BlockchainContext) => {
       val txB = ctx.newTxBuilder()
-      val box = boxes.filter(box => box.getValue > Configs.defaultTxFee).head
       val id = box.getId.toString
       val issuingNum = 1L
       val newBox = txB.outBoxBuilder
@@ -81,11 +80,10 @@ object Gateway {
     //    tokenId
   }
 
-  def issueToken(prover: ErgoProver, boxes: List[InputBox], tokenName: String, tokenDescription: String): String = {
+  def issueToken(prover: ErgoProver, box: InputBox, tokenName: String, tokenDescription: String): String = {
     Configs.ergoClient.execute((ctx: BlockchainContext) => {
 
       val txB = ctx.newTxBuilder()
-      val box = boxes.filter(box => box.getValue > Configs.defaultTxFee).head
       val id = box.getId.toString
       val issuingNum = 1000000L
       val newBox = txB.outBoxBuilder
@@ -712,22 +710,19 @@ object Gateway {
     """.stripMargin
 
 
-    var boxes = ctx.getUnspentBoxesFor(our).asScala.toList
-
-    println(boxes)
+    var boxes = ctx.getUnspentBoxesFor(our).asScala.toList.filter(box => box.getValue > Configs.defaultTxFee)
 
     println("\n\t\t\tissuing gravityTokenId:")
-    val gravityTokenId: String = issueNFTToken(prover, boxes, "Gravity_NFT_V0.1", "Gravity Project: https://gravity.tech/")
+    val gravityTokenId: String = issueNFTToken(prover, boxes.head, "Gravity_NFT_V0.1", "Gravity Project: https://gravity.tech/")
     println("\n\t\t\tissuing oracleTokenId:")
-    val oracleTokenId: String = issueNFTToken(prover, boxes, "Oracle_NFT_V0.1", "Gravity Project: https://gravity.tech/")
+    val oracleTokenId: String = issueNFTToken(prover, boxes.drop(1).head, "Oracle_NFT_V0.1", "Gravity Project: https://gravity.tech/")
     println("\n\t\t\tissuing pulseTokenId:")
-    val pulseTokenId: String = issueNFTToken(prover, boxes, "Pulse_NFT_V0.1", "Gravity Project: https://gravity.tech/")
+    val pulseTokenId: String = issueNFTToken(prover, boxes.drop(2).head, "Pulse_NFT_V0.1", "Gravity Project: https://gravity.tech/")
     println("\n\t\t\tissuing tokenRepoTokenId:")
-    val tokenRepoTokenId: String = issueToken(prover, boxes, "TokenRepo_V0.1", "Gravity Project: https://gravity.tech/")
-    println(tokenRepoTokenId)
+    val tokenRepoTokenId: String = issueToken(prover, boxes.drop(3).head, "TokenRepo_V0.1", "Gravity Project: https://gravity.tech/")
 
-//    val gravityTokenId: String = "49e9ada922fe60a1aaed68e71b5508804e3d39a7bdd493c4def8b77bac45bcf4"
-//    val oracleTokenId: String = "d643223a7c9dc9e2e18545fd5c0c552674e976ead61c7b76ce01b47e1940630f"
+//    val gravityTokenId: String = "59ddf1a141ed6047008619ea2c162d92dfb0b84473e0b8a4df1a173645437644"
+//    val oracleTokenId: String = "59ddf1a141ed6047008619ea2c162d92dfb0b84473e0b8a4df1a173645437644"
 //    val pulseTokenId: String = "2f93816ebf901596277b24720bdf732c437a3e4bc42e3e71095ef37e6f87cbd2"
 //    val tokenRepoTokenId: String = "fd87d089c2945cfdec4551bc6e846c869ca5ef7e2f7790631fc6afeb708126e5"
 
@@ -778,9 +773,9 @@ object Gateway {
     )
 
 
-    boxes = ctx.getUnspentBoxesFor(our).asScala.toList
+    boxes = boxes.drop(4)
 
-    println(boxes)
+//    println(boxes)
 
     println("\n\t\t\tcreateTokenRepoBox:")
     createTokenRepoBox(ctx, prover, boxes, tokenRepoContract, tokenRepoTokenId)
