@@ -30,34 +30,20 @@ object MergeBox {
       while (true) {
         try {
           var boxes = ctx.getUnspentBoxesFor(our).asScala.toList.filter(box => box.getValue == 1000000L)
-          if (boxes.isEmpty) {
+          if (boxes.size <= 1) {
             throw AllDone
           }
-          var ergBox: List[InputBox] = List()
-          var total = 0L
-          //        Thread.sleep(5 * 1000) // wait for 1000 millisecond
-          total = 0L
-          try {
-            while (total < 1000000L) {
-              for (box <- boxes) {
-                total += box.getValue
-                ergBox = box :: ergBox
-                if (total == 10000000L) {
-                  throw AllDone
-                }
-              }
-              boxes = ctx.getUnspentBoxesFor(our).asScala.toList.filter(box => box.getValue == 1000000L)
-              if (boxes.isEmpty) {
-                throw AllDone
-              }
-            }
-          } catch {
-            case AllDone =>
+          var ergBox = boxes
+          if (boxes.size >= 10){
+            ergBox = boxes.slice(0,10)
+          }
+          else {
+            ergBox = boxes
           }
           val txB = ctx.newTxBuilder()
 
           val newBox = txB.outBoxBuilder
-            .value(total - Configs.defaultTxFee)
+            .value((ergBox.size - 1) * Configs.defaultTxFee)
             .contract(new ErgoTreeContract(our.getErgoAddress.script))
             .build()
 

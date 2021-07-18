@@ -132,20 +132,24 @@ object Gateway {
     var boxes = ctx.getUnspentBoxesFor(our).asScala.toList.filter(box => box.getTokens.size() == 0)
     var ergBox = boxes
     var total = 0L
+    object AllDone extends Exception {}
+
     while (total < 1000000000000L) {
       //        Thread.sleep(5 * 1000) // wait for 1000 millisecond
       total = 0L
-      ergBox = boxes.filter(box => {
+      for (box <- boxes) {
         total += box.getValue
-        total - box.getValue < 1000000000000L
-      })
-      if (total < 1000000000000L){
+        ergBox = box :: ergBox
+        if (total == 1000000000000L) {
+          throw AllDone
+        }
+      }
+      if (total < 1000000000000L) {
         println("Not enough erg, waiting for more ergs ...")
         Thread.sleep(2 * 60 * 1000)
       }
       boxes = ctx.getUnspentBoxesFor(our).asScala.toList.filter(box => box.getTokens.size() == 0)
     }
-
 
 
     val txB = ctx.newTxBuilder()
@@ -200,7 +204,7 @@ object Gateway {
 
   def createGravityBox(ctx: BlockchainContext, prover: ErgoProver, gravityContract: ErgoContract, gravityTokenBoxId: String): Unit = {
     //    val boxes = ctx.getUnspentBoxesFor(our).asScala.toList
-//    ctx.getUnspentBoxesFor("")
+    //    ctx.getUnspentBoxesFor("")
     println("salam")
     //    val boxFee = boxes.filter(box => box.getTokens.size() == 0).head
     val tokenBox = ctx.getBoxesById(gravityTokenBoxId).head
@@ -843,18 +847,18 @@ object Gateway {
     println("\n\t\t\tcreateOracleBox:")
     createOracleBox(ctx, prover, ctx.getUnspentBoxesFor(Address.create(Configs.addressEncoder.fromProposition(gravityContract.getErgoTree).get.toString)).asScala.toList.head, oracleContract, oracleTokenBoxId)
 
-//    breakable {
-//      while (true) {
-//        Thread.sleep(5 * 1000) // wait for 1000 millisecond
-//        try {
-//          ctx.getUnspentBoxesFor(Address.create(Configs.addressEncoder.fromProposition(oracleContract.getErgoTree).get.toString)).asScala.toList.head
-//          break
-//        }
-//        catch {
-//          case e: Exception =>
-//        }
-//      }
-//    }
+    //    breakable {
+    //      while (true) {
+    //        Thread.sleep(5 * 1000) // wait for 1000 millisecond
+    //        try {
+    //          ctx.getUnspentBoxesFor(Address.create(Configs.addressEncoder.fromProposition(oracleContract.getErgoTree).get.toString)).asScala.toList.head
+    //          break
+    //        }
+    //        catch {
+    //          case e: Exception =>
+    //        }
+    //      }
+    //    }
     //    println("\n\t\t\tcreatePulseBox:")
     //    createPulseBox(ctx, prover, ctx.getUnspentBoxesFor(Address.create(Configs.addressEncoder.fromProposition(oracleContract.getErgoTree).get.toString)).asScala.toList.head, pulseContract, pulseTokenBoxId)
 
