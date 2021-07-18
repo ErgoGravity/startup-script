@@ -11,6 +11,7 @@ import sigmastate.Values.ErgoTree
 import sigmastate.eval._
 import sigmastate.interpreter.CryptoConstants
 import special.sigma.GroupElement
+import scala.util.control.Breaks._
 
 import java.io.{PrintWriter, File}
 import java.math.BigInteger
@@ -128,8 +129,25 @@ object Gateway {
 
   def createTokenRepoBox(ctx: BlockchainContext, prover: ErgoProver, tokenRepoContract: ErgoContract, tokenRepoTokenBoxId: String): Unit = {
     val tokenBox = ctx.getBoxesById(tokenRepoTokenBoxId).head
-    val boxes = ctx.getUnspentBoxesFor(our).asScala.toList
-    val boxFee = boxes.filter(box => box.getTokens.size() == 0 && box.getValue > 100 * Configs.defaultTxFee).head
+    var boxes = ctx.getUnspentBoxesFor(our).asScala.toList.filter(box => box.getTokens.size() == 0)
+    var ergBox = boxes
+    var total = 0L
+    while (total < 1000000000000L) {
+      //        Thread.sleep(5 * 1000) // wait for 1000 millisecond
+      total = 0L
+      ergBox = boxes.filter(box => {
+        total += box.getValue
+        total - box.getValue < 1000000000000L
+      })
+      if (total < 1000000000000L){
+        println("Not enough erg, waiting for more ergs ...")
+        Thread.sleep(2 * 60 * 1000)
+      }
+      boxes = ctx.getUnspentBoxesFor(our).asScala.toList.filter(box => box.getTokens.size() == 0)
+    }
+
+
+
     val txB = ctx.newTxBuilder()
 
     val addressTokenRepo = Address.create(Configs.addressEncoder.fromProposition(tokenRepoContract.getErgoTree).get.toString)
@@ -142,15 +160,15 @@ object Gateway {
         .build()
     }
 
-    def CreateChangeBoxes(txB: UnsignedTransactionBuilder, inputFeeBox: InputBox, tokenBox: InputBox, numToken: Long, numTokenBox: Int, feeAmount: Long, ownerAddress: Address): Seq[OutBox] = {
+    def CreateChangeBoxes(txB: UnsignedTransactionBuilder, inputFeeBox: List[InputBox], total: Long, tokenBox: InputBox, numToken: Long, numTokenBox: Int, feeAmount: Long, ownerAddress: Address): Seq[OutBox] = {
       val changeTokenBox = txB.outBoxBuilder
-        .value(Configs.defaultTxFee)
+        .value(feeAmount)
         .tokens(new ErgoToken(tokenBox.getTokens.get(0).getId, tokenBox.getTokens.get(0).getValue - (numToken * numTokenBox)))
         .contract(new ErgoTreeContract(ownerAddress.getErgoAddress.script))
         .build()
 
       val changeFeeBox = txB.outBoxBuilder
-        .value(inputFeeBox.getValue - (1000000L * numToken * numTokenBox) - feeAmount)
+        .value(total - (1000000L * numToken * numTokenBox) - feeAmount)
         .contract(new ErgoTreeContract(ownerAddress.getErgoAddress.script))
         .build()
 
@@ -159,8 +177,8 @@ object Gateway {
 
     val numTokenBox = 10
     var outboxes: Seq[OutBox] = List.range(0, numTokenBox).map(x => CreateTokenBox(txB, 100, tokenBox, addressTokenRepo))
-    outboxes = outboxes ++ CreateChangeBoxes(txB, boxFee, tokenBox, 100L, numTokenBox, Configs.defaultTxFee, our)
-    val tx = txB.boxesToSpend(Seq(tokenBox, boxFee).asJava)
+    outboxes = outboxes ++ CreateChangeBoxes(txB, ergBox, total, tokenBox, 100L, numTokenBox, Configs.defaultTxFee, our)
+    val tx = txB.boxesToSpend((Seq(tokenBox) ++ ergBox).asJava)
       .outputs(outboxes: _*)
       .fee(Configs.defaultTxFee)
       .sendChangeTo(our.getErgoAddress)
@@ -181,14 +199,13 @@ object Gateway {
   }
 
   def createGravityBox(ctx: BlockchainContext, prover: ErgoProver, gravityContract: ErgoContract, gravityTokenBoxId: String): Unit = {
-    val boxes = ctx.getUnspentBoxesFor(our).asScala.toList
-
+    //    val boxes = ctx.getUnspentBoxesFor(our).asScala.toList
+//    ctx.getUnspentBoxesFor("")
     println("salam")
-    val boxFee = boxes.filter(box => box.getTokens.size() == 0).head
+    //    val boxFee = boxes.filter(box => box.getTokens.size() == 0).head
     val tokenBox = ctx.getBoxesById(gravityTokenBoxId).head
 
     val txB = ctx.newTxBuilder()
-
 
     val consuls = Configs.consulsPk
     val consulsPri = Configs.consulsPriv
@@ -205,22 +222,22 @@ object Gateway {
       val signs_a = ErgoValue.of(signs.map(sign => sign._1).toArray, ErgoType.groupElementType)
       val signs_z = ErgoValue.of(signs.map(sign => sign._2).toArray, ErgoType.bigIntType)
       txB.outBoxBuilder
-        .value(tokenBox.getValue)
+        .value(tokenBox.getValue - Configs.defaultTxFee)
         .tokens(new ErgoToken(tokenBox.getTokens.get(0).getId, 1))
         .registers(bftValue, consulsValue, signs_a, signs_z)
         .contract(gravityContract)
         .build()
     }
 
-    def CreateChangeBoxes(txB: UnsignedTransactionBuilder, inputFeeBox: InputBox, feeAmount: Long, ownerAddress: Address): OutBox = {
-      txB.outBoxBuilder
-        .value(inputFeeBox.getValue - feeAmount)
-        .contract(new ErgoTreeContract(ownerAddress.getErgoAddress.script))
-        .build()
-    }
+    //    def CreateChangeBoxes(txB: UnsignedTransactionBuilder, inputFeeBox: InputBox, feeAmount: Long, ownerAddress: Address): OutBox = {
+    //      txB.outBoxBuilder
+    //        .value(inputFeeBox.getValue - feeAmount)
+    //        .contract(new ErgoTreeContract(ownerAddress.getErgoAddress.script))
+    //        .build()
+    //    }
 
-    val tx = txB.boxesToSpend(Seq(tokenBox, boxFee).asJava)
-      .outputs(createGravity(txB, tokenBox, gravityContract, consuls, consulsPrivateKey), CreateChangeBoxes(txB, boxFee, Configs.defaultTxFee, our))
+    val tx = txB.boxesToSpend(Seq(tokenBox).asJava)
+      .outputs(createGravity(txB, tokenBox, gravityContract, consuls, consulsPrivateKey))
       .fee(Configs.defaultTxFee)
       .sendChangeTo(our.getErgoAddress)
       .build()
@@ -240,70 +257,70 @@ object Gateway {
 
   }
 
-//  def changeGravityBox(ctx: BlockchainContext, prover: ErgoProver, boxFeee: List[InputBox], gravityContract: ErgoContract, gravityTokenId: String, gravityTokenBoxId: String): Unit = {
-//
-//    val gravityBoxes = ctx.getUnspentBoxesFor(Address.create(Configs.addressEncoder.fromProposition(gravityContract.getErgoTree).get.toString)).asScala.toList
-//    val gravityBox = gravityBoxes.filter(box => {
-//      box.getTokens.size() > 0 && box.getTokens.get(0).getId.toString.equals(gravityTokenId)
-//    }).head
-//
-//    val boxFee = boxFeee.filter(box => box.getTokens.size() == 0).head
-//    val txB = ctx.newTxBuilder()
-//
-//
-//    val consuls = Configs.consulsPk
-//    val newConsuls = Seq("9hsJjcdVHjisG6eK5LUZELpNNEnWBehKFUVS1iJtNjfuciSE462", "9emAEs3bGNCyTDSm85QuMbRqE9Nj6zktBPtjfpd8ADfZJ7NyHRN", "9ganzk7M74dSNiLDzNbUvVkKtnn6ACjxX5qNdFM5F7DtcHP97C6", "9eqwvMw7jneoXWXrSMbCJy7KehVDxR6HWhSfU8UFyvdNNXvAWSZ", "9gK1UVAZEfgsGCZeYsTzqfdfr9mPAvxyTFnbr33kWwkp8Aune8E")
-//    val consulsPri = Seq("446e075c46a76beeb4c4a11365e20561faf56162be8d4f3e0d0cf18e82d38b95", "0", "0", "2f5827bfadbc5689c789402cb631b7b20006b0c0965ce873711f9f1654c68bc", "c017710a52c74015929e5e046752ea401baff2e0b513636dfb9d9de1bcae78be")
-//    val consulsPrivateKey = consulsPri.map(BigInt(_, 16))
-//
-//
-//    def createGravity(txB: UnsignedTransactionBuilder, tokenBox: InputBox, gravityContract: ErgoContract, consuls: Seq[String], consulsPrivateKey: Seq[BigInt]): OutBox = {
-//      val bftValue = ErgoValue.of(3)
-//      val consulsAddress = consuls.map(Address.create(_).getPublicKeyGE.getEncoded)
-//      val msg = consulsAddress.fold(JavaHelpers.collFrom("".getBytes))(_.append(_))
-//      val signs = consulsPrivateKey.map(sign(msg.toArray, _))
-//      val consulsValue = ErgoValue.of(IndexedSeq(consulsAddress: _*).toArray, ErgoType.collType(ErgoType.byteType))
-//
-//      val signs_a = ErgoValue.of(signs.map(sign => sign._1).toArray, ErgoType.groupElementType)
-//      val signs_z = ErgoValue.of(signs.map(sign => sign._2).toArray, ErgoType.bigIntType)
-//      txB.outBoxBuilder
-//        .value(tokenBox.getValue)
-//        .tokens(new ErgoToken(tokenBox.getTokens.get(0).getId, 1))
-//        .registers(bftValue, consulsValue, signs_a, signs_z)
-//        .contract(gravityContract)
-//        .build()
-//    }
-//
-//    def CreateChangeBoxes(txB: UnsignedTransactionBuilder, inputFeeBox: InputBox, feeAmount: Long, ownerAddress: Address): OutBox = {
-//      txB.outBoxBuilder
-//        .value(inputFeeBox.getValue - feeAmount)
-//        .contract(new ErgoTreeContract(ownerAddress.getErgoAddress.script))
-//        .build()
-//    }
-//
-//    val tx = txB.boxesToSpend(Seq(gravityBox, boxFee).asJava)
-//      .outputs(createGravity(txB, gravityBox, gravityContract, newConsuls, consulsPrivateKey), CreateChangeBoxes(txB, boxFee, Configs.defaultTxFee, our))
-//      .fee(Configs.defaultTxFee)
-//      .sendChangeTo(our.getErgoAddress)
-//      .build()
-//
-//    val signed: SignedTransaction = prover.sign(tx)
-//    new PrintWriter("result_gateway/ChangeGravityBox_signed.txt") {
-//      write(signed.toJson(false));
-//      close()
-//    }
-//    println(signed.toJson(false))
-//    //    val txId = ctx.sendTransaction(signed)
-//    //    new PrintWriter("result_gateway/ChangeGravityBox_txId.txt") { write(txId); close() }
-//    //    println(txId)
-//
-//  }
+  //  def changeGravityBox(ctx: BlockchainContext, prover: ErgoProver, boxFeee: List[InputBox], gravityContract: ErgoContract, gravityTokenId: String, gravityTokenBoxId: String): Unit = {
+  //
+  //    val gravityBoxes = ctx.getUnspentBoxesFor(Address.create(Configs.addressEncoder.fromProposition(gravityContract.getErgoTree).get.toString)).asScala.toList
+  //    val gravityBox = gravityBoxes.filter(box => {
+  //      box.getTokens.size() > 0 && box.getTokens.get(0).getId.toString.equals(gravityTokenId)
+  //    }).head
+  //
+  //    val boxFee = boxFeee.filter(box => box.getTokens.size() == 0).head
+  //    val txB = ctx.newTxBuilder()
+  //
+  //
+  //    val consuls = Configs.consulsPk
+  //    val newConsuls = Seq("9hsJjcdVHjisG6eK5LUZELpNNEnWBehKFUVS1iJtNjfuciSE462", "9emAEs3bGNCyTDSm85QuMbRqE9Nj6zktBPtjfpd8ADfZJ7NyHRN", "9ganzk7M74dSNiLDzNbUvVkKtnn6ACjxX5qNdFM5F7DtcHP97C6", "9eqwvMw7jneoXWXrSMbCJy7KehVDxR6HWhSfU8UFyvdNNXvAWSZ", "9gK1UVAZEfgsGCZeYsTzqfdfr9mPAvxyTFnbr33kWwkp8Aune8E")
+  //    val consulsPri = Seq("446e075c46a76beeb4c4a11365e20561faf56162be8d4f3e0d0cf18e82d38b95", "0", "0", "2f5827bfadbc5689c789402cb631b7b20006b0c0965ce873711f9f1654c68bc", "c017710a52c74015929e5e046752ea401baff2e0b513636dfb9d9de1bcae78be")
+  //    val consulsPrivateKey = consulsPri.map(BigInt(_, 16))
+  //
+  //
+  //    def createGravity(txB: UnsignedTransactionBuilder, tokenBox: InputBox, gravityContract: ErgoContract, consuls: Seq[String], consulsPrivateKey: Seq[BigInt]): OutBox = {
+  //      val bftValue = ErgoValue.of(3)
+  //      val consulsAddress = consuls.map(Address.create(_).getPublicKeyGE.getEncoded)
+  //      val msg = consulsAddress.fold(JavaHelpers.collFrom("".getBytes))(_.append(_))
+  //      val signs = consulsPrivateKey.map(sign(msg.toArray, _))
+  //      val consulsValue = ErgoValue.of(IndexedSeq(consulsAddress: _*).toArray, ErgoType.collType(ErgoType.byteType))
+  //
+  //      val signs_a = ErgoValue.of(signs.map(sign => sign._1).toArray, ErgoType.groupElementType)
+  //      val signs_z = ErgoValue.of(signs.map(sign => sign._2).toArray, ErgoType.bigIntType)
+  //      txB.outBoxBuilder
+  //        .value(tokenBox.getValue)
+  //        .tokens(new ErgoToken(tokenBox.getTokens.get(0).getId, 1))
+  //        .registers(bftValue, consulsValue, signs_a, signs_z)
+  //        .contract(gravityContract)
+  //        .build()
+  //    }
+  //
+  //    def CreateChangeBoxes(txB: UnsignedTransactionBuilder, inputFeeBox: InputBox, feeAmount: Long, ownerAddress: Address): OutBox = {
+  //      txB.outBoxBuilder
+  //        .value(inputFeeBox.getValue - feeAmount)
+  //        .contract(new ErgoTreeContract(ownerAddress.getErgoAddress.script))
+  //        .build()
+  //    }
+  //
+  //    val tx = txB.boxesToSpend(Seq(gravityBox, boxFee).asJava)
+  //      .outputs(createGravity(txB, gravityBox, gravityContract, newConsuls, consulsPrivateKey), CreateChangeBoxes(txB, boxFee, Configs.defaultTxFee, our))
+  //      .fee(Configs.defaultTxFee)
+  //      .sendChangeTo(our.getErgoAddress)
+  //      .build()
+  //
+  //    val signed: SignedTransaction = prover.sign(tx)
+  //    new PrintWriter("result_gateway/ChangeGravityBox_signed.txt") {
+  //      write(signed.toJson(false));
+  //      close()
+  //    }
+  //    println(signed.toJson(false))
+  //    //    val txId = ctx.sendTransaction(signed)
+  //    //    new PrintWriter("result_gateway/ChangeGravityBox_txId.txt") { write(txId); close() }
+  //    //    println(txId)
+  //
+  //  }
 
   def createOracleBox(ctx: BlockchainContext, prover: ErgoProver, gravityBox: InputBox, oracleContract: ErgoContract, oracleTokenBoxId: String): Unit = {
     val tokenBox = ctx.getBoxesById(oracleTokenBoxId).head
     println("salam")
-    val boxes = ctx.getUnspentBoxesFor(our).asScala.toList
-    val boxFee = boxes.filter(box => box.getTokens.size() == 0).head
+    //    val boxes = ctx.getUnspentBoxesFor(our).asScala.toList
+    //    val boxFee = boxes.filter(box => box.getTokens.size() == 0).head
     val txB = ctx.newTxBuilder()
 
 
@@ -322,22 +339,22 @@ object Gateway {
       val signs_a = ErgoValue.of(signs.map(sign => sign._1).toArray, ErgoType.groupElementType)
       val signs_z = ErgoValue.of(signs.map(sign => sign._2).toArray, ErgoType.bigIntType)
       txB.outBoxBuilder
-        .value(tokenBox.getValue)
+        .value(tokenBox.getValue - Configs.defaultTxFee)
         .tokens(new ErgoToken(tokenBox.getTokens.get(0).getId, 1))
         .registers(bftValue, oraclesValue, signs_a, signs_z)
         .contract(oracleContract)
         .build()
     }
 
-    def CreateChangeBoxes(txB: UnsignedTransactionBuilder, inputFeeBox: InputBox, feeAmount: Long, ownerAddress: Address): OutBox = {
-      txB.outBoxBuilder
-        .value(inputFeeBox.getValue - feeAmount)
-        .contract(new ErgoTreeContract(ownerAddress.getErgoAddress.script))
-        .build()
-    }
+    //    def CreateChangeBoxes(txB: UnsignedTransactionBuilder, inputFeeBox: InputBox, feeAmount: Long, ownerAddress: Address): OutBox = {
+    //      txB.outBoxBuilder
+    //        .value(inputFeeBox.getValue - feeAmount)
+    //        .contract(new ErgoTreeContract(ownerAddress.getErgoAddress.script))
+    //        .build()
+    //    }
 
-    val tx = txB.boxesToSpend(Seq(tokenBox, boxFee).asJava)
-      .outputs(createOracle(txB, tokenBox, oracleContract, oracles, oraclesPrivateKey), CreateChangeBoxes(txB, boxFee, Configs.defaultTxFee, our))
+    val tx = txB.boxesToSpend(Seq(tokenBox).asJava)
+      .outputs(createOracle(txB, tokenBox, oracleContract, oracles, oraclesPrivateKey))
       .fee(Configs.defaultTxFee)
       .withDataInputs(Seq(gravityBox).asJava)
       .sendChangeTo(our.getErgoAddress)
@@ -358,63 +375,63 @@ object Gateway {
 
   }
 
-  def createPulseBox(ctx: BlockchainContext, prover: ErgoProver, oracleBox: InputBox, pulseContract: ErgoContract, pulseTokenBoxId: String): Unit = {
-    val tokenBox = ctx.getBoxesById(pulseTokenBoxId).head
-    val boxes = ctx.getUnspentBoxesFor(our).asScala.toList
-    val boxFee = boxes.filter(box => box.getTokens.size() == 0).head
-    val txB = ctx.newTxBuilder()
-
-
-    val oracles = Configs.oraclesPk
-    val oraclesPri = Configs.oraclesPriv
-    val oraclesPrivateKey = oraclesPri.map(BigInt(_, 16))
-
-
-    def createPulse(txB: UnsignedTransactionBuilder, tokenBox: InputBox, pulseContract: ErgoContract, oraclesPrivateKey: Seq[BigInt]): OutBox = {
-      val msgData = Base16.encode("create first pulse box".getBytes).getBytes()
-      val msgValue = ErgoValue.of(msgData)
-      val signs = oraclesPrivateKey.map(sign(msgData, _))
-      val pulseId = ErgoValue.of(2000L)
-
-      val signs_a = ErgoValue.of(signs.map(sign => sign._1).toArray, ErgoType.groupElementType)
-      val signs_z = ErgoValue.of(signs.map(sign => sign._2).toArray, ErgoType.bigIntType)
-      txB.outBoxBuilder
-        .value(tokenBox.getValue)
-        .tokens(new ErgoToken(tokenBox.getTokens.get(0).getId, 1))
-        .registers(msgValue, signs_a, signs_z, pulseId)
-        .contract(pulseContract)
-        .build()
-    }
-
-    def CreateChangeBoxes(txB: UnsignedTransactionBuilder, inputFeeBox: InputBox, feeAmount: Long, ownerAddress: Address): OutBox = {
-      txB.outBoxBuilder
-        .value(inputFeeBox.getValue - feeAmount)
-        .contract(new ErgoTreeContract(ownerAddress.getErgoAddress.script))
-        .build()
-    }
-
-    val tx = txB.boxesToSpend(Seq(tokenBox, boxFee).asJava)
-      .outputs(createPulse(txB, tokenBox, pulseContract, oraclesPrivateKey), CreateChangeBoxes(txB, boxFee, Configs.defaultTxFee, our))
-      .fee(Configs.defaultTxFee)
-      .withDataInputs(Seq(oracleBox).asJava)
-      .sendChangeTo(our.getErgoAddress)
-      .build()
-
-    val signed: SignedTransaction = prover.sign(tx)
-
-    new PrintWriter("result_gateway/PulseBox_signed.txt") {
-      write(signed.toJson(false));
-      close()
-    }
-    println(signed.toJson(false))
-    val txId = ctx.sendTransaction(signed)
-    new PrintWriter("result_gateway/PulseBox_txId.txt") {
-      write(txId);
-      close()
-    }
-    println(txId)
-
-  }
+  //  def createPulseBox(ctx: BlockchainContext, prover: ErgoProver, oracleBox: InputBox, pulseContract: ErgoContract, pulseTokenBoxId: String): Unit = {
+  //    val tokenBox = ctx.getBoxesById(pulseTokenBoxId).head
+  //    val boxes = ctx.getUnspentBoxesFor(our).asScala.toList
+  //    val boxFee = boxes.filter(box => box.getTokens.size() == 0).head
+  //    val txB = ctx.newTxBuilder()
+  //
+  //
+  //    val oracles = Configs.oraclesPk
+  //    val oraclesPri = Configs.oraclesPriv
+  //    val oraclesPrivateKey = oraclesPri.map(BigInt(_, 16))
+  //
+  //
+  //    def createPulse(txB: UnsignedTransactionBuilder, tokenBox: InputBox, pulseContract: ErgoContract, oraclesPrivateKey: Seq[BigInt]): OutBox = {
+  //      val msgData = Base16.encode("create first pulse box".getBytes).getBytes()
+  //      val msgValue = ErgoValue.of(msgData)
+  //      val signs = oraclesPrivateKey.map(sign(msgData, _))
+  //      val pulseId = ErgoValue.of(2000L)
+  //
+  //      val signs_a = ErgoValue.of(signs.map(sign => sign._1).toArray, ErgoType.groupElementType)
+  //      val signs_z = ErgoValue.of(signs.map(sign => sign._2).toArray, ErgoType.bigIntType)
+  //      txB.outBoxBuilder
+  //        .value(tokenBox.getValue)
+  //        .tokens(new ErgoToken(tokenBox.getTokens.get(0).getId, 1))
+  //        .registers(msgValue, signs_a, signs_z, pulseId)
+  //        .contract(pulseContract)
+  //        .build()
+  //    }
+  //
+  //    def CreateChangeBoxes(txB: UnsignedTransactionBuilder, inputFeeBox: InputBox, feeAmount: Long, ownerAddress: Address): OutBox = {
+  //      txB.outBoxBuilder
+  //        .value(inputFeeBox.getValue - feeAmount)
+  //        .contract(new ErgoTreeContract(ownerAddress.getErgoAddress.script))
+  //        .build()
+  //    }
+  //
+  //    val tx = txB.boxesToSpend(Seq(tokenBox, boxFee).asJava)
+  //      .outputs(createPulse(txB, tokenBox, pulseContract, oraclesPrivateKey), CreateChangeBoxes(txB, boxFee, Configs.defaultTxFee, our))
+  //      .fee(Configs.defaultTxFee)
+  //      .withDataInputs(Seq(oracleBox).asJava)
+  //      .sendChangeTo(our.getErgoAddress)
+  //      .build()
+  //
+  //    val signed: SignedTransaction = prover.sign(tx)
+  //
+  //    new PrintWriter("result_gateway/PulseBox_signed.txt") {
+  //      write(signed.toJson(false));
+  //      close()
+  //    }
+  //    println(signed.toJson(false))
+  //    val txId = ctx.sendTransaction(signed)
+  //    new PrintWriter("result_gateway/PulseBox_txId.txt") {
+  //      write(txId);
+  //      close()
+  //    }
+  //    println(txId)
+  //
+  //  }
 
   def run(ctx: BlockchainContext): Unit = {
 
@@ -709,9 +726,15 @@ object Gateway {
     """.stripMargin
 
 
-    val boxes = ctx.getUnspentBoxesFor(our).asScala.toList.filter(box => box.getValue > 2 * Configs.defaultTxFee)
+    var boxes = ctx.getUnspentBoxesFor(our).asScala.toList
+    println(s"size: ${
+      boxes.size
+    }")
+    boxes = boxes.filter(box => box.getValue > 2 * Configs.defaultTxFee)
 
-    println(s"size: ${boxes.size}")
+    println(s"size: ${
+      boxes.size
+    }")
 
     println("\n\t\t\tissuing gravityTokenId:")
     val (gravityTokenId, gravityTokenBoxId: String) = issueNFTToken(prover, boxes.head, "Gravity_NFT_Sigma", "Gravity Project: https://gravity.tech/")
@@ -723,18 +746,15 @@ object Gateway {
     println("\n\t\t\tissuing tokenRepoTokenId:")
     val (tokenRepoTokenId, tokenRepoTokenBoxId: String) = issueToken(prover, boxes.drop(3).head, "TokenRepo_Sigma", "Gravity Project: https://gravity.tech/")
 
-    println(gravityTokenId)
-    println(gravityTokenBoxId)
-
-//    val gravityTokenId: String = "7fab095e480b77dfc57e1056a7cf5dd38f8973d051e2e85b296923efe625c167"
-//    val oracleTokenId: String = "87860efd2551bf79e53b9b972cf01c9253ed311d451a7ea8f029034771ac5600"
-//    val pulseTokenId: String = "e17418b5208fcf51b5ecc33321cb86456d9bf58fde2e74b875549b09be1d8d9e"
-//    val tokenRepoTokenId: String = "a134d2a4575e02c4c492dcd7f3f4ebe4c82544af688a722a1b0aa4168788686d"
-//
-//    val gravityTokenBoxId: String = "94043bffc7a6d034a2dffe2f59240bdc8fc07ef657e11abcd4af04d1354509c1"
-//    val oracleTokenBoxId: String = "ce002f2a25f2b63cbd0132ca2e7652ab49d39ec3b0986121a37171414ae31407"
-//    val pulseTokenBoxId: String = "a2abc5424bb6ac8304635b8eb233bee537a1d93eeff7e555b05b8a416727d1c1"
-//    val tokenRepoTokenBoxId: String = "e592f9d0107c3bf4811599ec2d81f5eebdb04e4e02a292fda29a71468dd3289d"
+    //    val gravityTokenId: String = "7fab095e480b77dfc57e1056a7cf5dd38f8973d051e2e85b296923efe625c167"
+    //    val oracleTokenId: String = "87860efd2551bf79e53b9b972cf01c9253ed311d451a7ea8f029034771ac5600"
+    //    val pulseTokenId: String = "e17418b5208fcf51b5ecc33321cb86456d9bf58fde2e74b875549b09be1d8d9e"
+    //    val tokenRepoTokenId: String = "a134d2a4575e02c4c492dcd7f3f4ebe4c82544af688a722a1b0aa4168788686d"
+    //
+    //    val gravityTokenBoxId: String = "94043bffc7a6d034a2dffe2f59240bdc8fc07ef657e11abcd4af04d1354509c1"
+    //    val oracleTokenBoxId: String = "ce002f2a25f2b63cbd0132ca2e7652ab49d39ec3b0986121a37171414ae31407"
+    //    val pulseTokenBoxId: String = "a2abc5424bb6ac8304635b8eb233bee537a1d93eeff7e555b05b8a416727d1c1"
+    //    val tokenRepoTokenBoxId: String = "e592f9d0107c3bf4811599ec2d81f5eebdb04e4e02a292fda29a71468dd3289d"
 
     val tokenRepoContract: ErgoContract = ctx.compileContract(
       ConstantsBuilder.create()
@@ -782,7 +802,19 @@ object Gateway {
       gravityScript
     )
 
-    //    Thread.sleep(3 * 60 * 1000) // wait for 1000 millisecond
+    breakable {
+      while (true) {
+        Thread.sleep(5 * 1000) // wait for 1000 millisecond
+        try {
+          ctx.getBoxesById(gravityTokenBoxId)
+          Thread.sleep(5 * 1000) // wait for 1000 millisecond
+          break
+        }
+        catch {
+          case e: Exception =>
+        }
+      }
+    }
 
     println("\n\t\t\tcreateGravityBox:")
     createGravityBox(ctx, prover, gravityContract, gravityTokenBoxId)
@@ -795,12 +827,50 @@ object Gateway {
 
     //    Thread.sleep(2 * 60 * 1000) // wait for 1000 millisecond
 
+    breakable {
+      while (true) {
+        Thread.sleep(5 * 1000) // wait for 1000 millisecond
+        try {
+          ctx.getUnspentBoxesFor(Address.create(Configs.addressEncoder.fromProposition(gravityContract.getErgoTree).get.toString)).asScala.toList.head
+          Thread.sleep(5 * 1000) // wait for 1000 millisecond
+          break
+        }
+        catch {
+          case e: Exception =>
+        }
+      }
+    }
     println("\n\t\t\tcreateOracleBox:")
     createOracleBox(ctx, prover, ctx.getUnspentBoxesFor(Address.create(Configs.addressEncoder.fromProposition(gravityContract.getErgoTree).get.toString)).asScala.toList.head, oracleContract, oracleTokenBoxId)
 
-    println("\n\t\t\tcreatePulseBox:")
-    createPulseBox(ctx, prover, ctx.getUnspentBoxesFor(Address.create(Configs.addressEncoder.fromProposition(oracleContract.getErgoTree).get.toString)).asScala.toList.head, pulseContract, pulseTokenBoxId)
+//    breakable {
+//      while (true) {
+//        Thread.sleep(5 * 1000) // wait for 1000 millisecond
+//        try {
+//          ctx.getUnspentBoxesFor(Address.create(Configs.addressEncoder.fromProposition(oracleContract.getErgoTree).get.toString)).asScala.toList.head
+//          break
+//        }
+//        catch {
+//          case e: Exception =>
+//        }
+//      }
+//    }
+    //    println("\n\t\t\tcreatePulseBox:")
+    //    createPulseBox(ctx, prover, ctx.getUnspentBoxesFor(Address.create(Configs.addressEncoder.fromProposition(oracleContract.getErgoTree).get.toString)).asScala.toList.head, pulseContract, pulseTokenBoxId)
 
+    breakable {
+      while (true) {
+        Thread.sleep(5 * 1000) // wait for 1000 millisecond
+        try {
+          ctx.getBoxesById(tokenRepoTokenBoxId)
+          Thread.sleep(5 * 1000) // wait for 1000 millisecond
+          break
+        }
+        catch {
+          case e: Exception =>
+        }
+      }
+    }
     println("\n\t\t\tcreateTokenRepoBox:")
     createTokenRepoBox(ctx, prover, tokenRepoContract, tokenRepoTokenBoxId)
   }
