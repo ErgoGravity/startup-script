@@ -1,0 +1,55 @@
+{
+  "id": "ca099fd0aed65f2e8636e1ed377d3dd38a244fd7d09c6caad96dd790bcecc6c9",
+  "inputs": [
+    {
+      "boxId": "77fa14f67436a95ec8d19f86d13ee87c3e71c597c26efb5eea5f55407b26303c",
+      "spendingProof": {
+        "proofBytes": "a25749beba5d2ebd7b446b631f29960bc9bfec0c8e9adc4b44c63cab700b926835cfa79dc388567851619587012e9afd48f5161298c98eb3",
+        "extension": {}
+      }
+    }
+  ],
+  "dataInputs": [],
+  "outputs": [
+    {
+      "boxId": "f590a01617e516791c177027aefc912cab76266c9c9a9e6b681690bc67546a3b",
+      "value": 1000000,
+      "ergoTree": "0008cd035402b0ac7024fdfbd8a8f419a8f64361d0e605c8b2bc9372250194a84f96a55c",
+      "creationHeight": 17074,
+      "assets": [
+        {
+          "tokenId": "77fa14f67436a95ec8d19f86d13ee87c3e71c597c26efb5eea5f55407b26303c",
+          "amount": 1
+        }
+      ],
+      "additionalRegisters": {
+        "R4": "0e10477261766974795f4e46545f56302e31",
+        "R5": "0e26477261766974792050726f6a6563743a2068747470733a2f2f677261766974792e746563682f",
+        "R6": "0e0130",
+        "R7": "0e0101"
+      },
+      "transactionId": "ca099fd0aed65f2e8636e1ed377d3dd38a244fd7d09c6caad96dd790bcecc6c9",
+      "index": 0
+    },
+    {
+      "boxId": "fe11788c2ff16586a852568097bb35de52eaa1989959614a0a8093a3be28c1f9",
+      "value": 1000000,
+      "ergoTree": "1005040004000e36100204a00b08cd0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798ea02d192a39a8cc7a701730073011001020402d19683030193a38cc7b2a57300000193c2b2a57301007473027303830108cdeeac93b1a57304",
+      "creationHeight": 17074,
+      "assets": [],
+      "additionalRegisters": {},
+      "transactionId": "ca099fd0aed65f2e8636e1ed377d3dd38a244fd7d09c6caad96dd790bcecc6c9",
+      "index": 1
+    },
+    {
+      "boxId": "84baf164592357cd188dd68e3249336f16b6eb97241880cbec2e637a62dc4a7b",
+      "value": 9000000,
+      "ergoTree": "0008cd035402b0ac7024fdfbd8a8f419a8f64361d0e605c8b2bc9372250194a84f96a55c",
+      "creationHeight": 17074,
+      "assets": [],
+      "additionalRegisters": {},
+      "transactionId": "ca099fd0aed65f2e8636e1ed377d3dd38a244fd7d09c6caad96dd790bcecc6c9",
+      "index": 2
+    }
+  ]
+}

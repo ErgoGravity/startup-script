@@ -47,7 +47,7 @@ object Susy {
   }
 
   def issueNFTToken(prover: ErgoProver, boxes: List[InputBox], tokenName: String, tokenDescription: String): String = {
-    Configs.ergoClient.execute((ctx: BlockchainContext) => {
+    Utils.ergoClient.execute((ctx: BlockchainContext) => {
 
 
       val txB = ctx.newTxBuilder()
@@ -77,7 +77,7 @@ object Susy {
   }
 
   def issueToken(prover: ErgoProver, boxes: List[InputBox], tokenName: String, tokenDescription: String): String = {
-    Configs.ergoClient.execute((ctx: BlockchainContext) => {
+    Utils.ergoClient.execute((ctx: BlockchainContext) => {
 
       val txB = ctx.newTxBuilder()
       val box = boxes.filter(box => box.getValue > 1000000L).head
@@ -106,7 +106,7 @@ object Susy {
   }
 
   def randomAddr(): Unit = {
-    Configs.ergoClient.execute((ctx: BlockchainContext) => {
+    Utils.ergoClient.execute((ctx: BlockchainContext) => {
       val rnd = randBigInt
       println(s"secret: ${rnd.toString(16)}")
       val addr = getProveDlogAddress(rnd, ctx)

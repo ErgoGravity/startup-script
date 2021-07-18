@@ -1,18 +1,17 @@
 name := "StartupScript"
 
-version := "0.1.0"
+version := "0.1.1"
 organization := "org.ergoplatform"
 scalaVersion := "2.12.10"
 
-resolvers ++= Seq(
-  "Sonatype Public" at "https://oss.sonatype.org/content/groups/public/",
-  "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/",
-  "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
-  "Typesafe maven releases" at "https://repo1.maven.org/maven2/com/typesafe/config/"
-)
+resolvers += "scalaz-bintray" at "https://dl.bintray.com/scalaz/releases"
+resolvers += "Akka Snapshot Repository" at "https://repo.akka.io/snapshots/"
+resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
+resolvers += "Typesafe maven releases" at "https://dl.bintray.com/typesafe/maven-releases/"
+resolvers += "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/"
 
 libraryDependencies ++= Seq(
-  "org.ergoplatform" %% "ergo-appkit" % "susy-appkit-local",
+  "org.ergoplatform" %% "ergo-appkit" % "develop-6fc8ccbb-SNAPSHOT",
   "org.scalaj" %% "scalaj-http" % "2.4.2",
   "com.joefkelley" %% "argyle" % "1.0.0",
   "com.github.scopt" %% "scopt" % "4.0.1",

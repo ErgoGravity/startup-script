@@ -21,5 +21,4 @@ object Configs extends ConfigHelper {
     readKey("oraclesPk.four"), readKey("oraclesPk.five"))
   lazy val oraclesPriv = Seq(readKey("oraclesPriv.one"), readKey("oraclesPriv.two"), readKey("oraclesPriv.three"),
     readKey("oraclesPriv.four"), readKey("oraclesPriv.five"))
-  lazy val ergoClient: ErgoClient = RestApiErgoClient.create(nodeUrl, networkType, nodeApiKey, explorerUrl)
-}
+  }
