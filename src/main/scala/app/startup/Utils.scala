@@ -11,8 +11,8 @@ object Utils {
 
     ergoClient.execute((ctx: BlockchainContext) => {
       configs.proxy.toLowerCase match {
-        case "gateway" => MergeBox.run(ctx)
-//        case "gateway" => Gateway.run(ctx)
+//        case "gateway" => MergeBox.run(ctx)
+        case "gateway" => Gateway.run(ctx)
 //        case "susy" => Susy.run(ctx)
       }
     })
