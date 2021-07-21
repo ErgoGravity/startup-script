@@ -1,0 +1,54 @@
+{
+  "id": "2d07ecc4c343a5ce43870606b67dba4bd0eb1c5df2db15df03338125b04d11c6",
+  "inputs": [
+    {
+      "boxId": "e6f69b8224fc68c29bd830815e08fdab5e723427423929ab75b6dc75e9ee1ad8",
+      "spendingProof": {
+        "proofBytes": "f967c219768c2697a15bb42efdd5081f8064f774a0cd0f1026905022f1f2f1a0a0a3789a9ce451f872af1bd65eb81bb8ed6f7100bf68445c",
+        "extension": {}
+      }
+    }
+  ],
+  "dataInputs": [],
+  "outputs": [
+    {
+      "boxId": "ed4562bf33cc6f08a9b020a3b9e1e6126b27439596e45b9d7a6f9841d98b79f4",
+      "value": 1000000,
+      "ergoTree": "0008cd035402b0ac7024fdfbd8a8f419a8f64361d0e605c8b2bc9372250194a84f96a55c",
+      "creationHeight": 20753,
+      "assets": [
+        {
+          "tokenId": "e6f69b8224fc68c29bd830815e08fdab5e723427423929ab75b6dc75e9ee1ad8",
+          "amount": 1000000
+        }
+      ],
+      "additionalRegisters": {
+        "R4": "0e0f546f6b656e5265706f5f5369676d61",
+        "R5": "0e26477261766974792050726f6a6563743a2068747470733a2f2f677261766974792e746563682f",
+        "R6": "0e0130"
+      },
+      "transactionId": "2d07ecc4c343a5ce43870606b67dba4bd0eb1c5df2db15df03338125b04d11c6",
+      "index": 0
+    },
+    {
+      "boxId": "c9f0f5ac23a8062ab0eb5b2965e242f452e9d6a25006fdb9b8025396edc24331",
+      "value": 1000000,
+      "ergoTree": "1005040004000e36100204a00b08cd0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798ea02d192a39a8cc7a701730073011001020402d19683030193a38cc7b2a57300000193c2b2a57301007473027303830108cdeeac93b1a57304",
+      "creationHeight": 20753,
+      "assets": [],
+      "additionalRegisters": {},
+      "transactionId": "2d07ecc4c343a5ce43870606b67dba4bd0eb1c5df2db15df03338125b04d11c6",
+      "index": 1
+    },
+    {
+      "boxId": "66465c7916e2f47de64a7a2f10f7988396ffabf9431690e9a50852d1b31a2de3",
+      "value": 9000000,
+      "ergoTree": "0008cd035402b0ac7024fdfbd8a8f419a8f64361d0e605c8b2bc9372250194a84f96a55c",
+      "creationHeight": 20753,
+      "assets": [],
+      "additionalRegisters": {},
+      "transactionId": "2d07ecc4c343a5ce43870606b67dba4bd0eb1c5df2db15df03338125b04d11c6",
+      "index": 2
+    }
+  ]
+}
