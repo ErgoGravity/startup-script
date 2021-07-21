@@ -218,13 +218,14 @@ object Gateway {
       val msg = consulsAddress.fold(JavaHelpers.collFrom("".getBytes))(_.append(_))
       val signs = consulsPrivateKey.map(sign(msg.toArray, _))
       val consulsValue = ErgoValue.of(IndexedSeq(consulsAddress: _*).toArray, ErgoType.collType(ErgoType.byteType))
+      val lastround = ErgoValue.of(0)
 
       val signs_a = ErgoValue.of(signs.map(sign => sign._1).toArray, ErgoType.groupElementType)
       val signs_z = ErgoValue.of(signs.map(sign => sign._2).toArray, ErgoType.bigIntType)
       txB.outBoxBuilder
         .value(tokenBox.getValue)
         .tokens(new ErgoToken(tokenBox.getTokens.get(0).getId, 1))
-        .registers(bftValue, consulsValue, signs_a, signs_z)
+        .registers(bftValue, consulsValue, signs_a, signs_z, lastround)
         .contract(gravityContract)
         .build()
     }
