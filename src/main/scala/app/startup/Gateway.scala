@@ -669,13 +669,13 @@ object Gateway {
     }")
 
     println("\n\t\t\tissuing gravityTokenId:")
-    val (gravityTokenId, gravityTokenBoxId: String) = issueNFTToken(prover, boxes.head, "Gravity_NFT_sigma", "Gravity Project: https://gravity.tech/")
+    val (gravityTokenId, gravityTokenBoxId: String) = issueNFTToken(prover, boxes.head, "Gravity_NFT_erg", "Gravity Project: https://gravity.tech/")
     println("\n\t\t\tissuing oracleTokenId:")
-    val (oracleTokenId, oracleTokenBoxId: String) = issueNFTToken(prover, boxes.drop(1).head, "Oracle_NFT_sigma", "Gravity Project: https://gravity.tech/")
+    val (oracleTokenId, oracleTokenBoxId: String) = issueNFTToken(prover, boxes.drop(1).head, "Oracle_NFT_erg", "Gravity Project: https://gravity.tech/")
     println("\n\t\t\tissuing pulseTokenId:")
-    val (pulseTokenId, pulseTokenBoxId: String) = issueNFTToken(prover, boxes.drop(2).head, "Pulse_NFT_sigma", "Gravity Project: https://gravity.tech/")
+    val (pulseTokenId, pulseTokenBoxId: String) = issueNFTToken(prover, boxes.drop(2).head, "Pulse_NFT_erg", "Gravity Project: https://gravity.tech/")
     println("\n\t\t\tissuing tokenRepoTokenId:")
-    val (tokenRepoTokenId, tokenRepoTokenBoxId: String) = issueToken(prover, boxes.drop(3).head, "TokenRepo_sigma", "Gravity Project: https://gravity.tech/")
+    val (tokenRepoTokenId, tokenRepoTokenBoxId: String) = issueToken(prover, boxes.drop(3).head, "TokenRepo_erg", "Gravity Project: https://gravity.tech/")
 
     val tokenRepoContract: ErgoContract = ctx.compileContract(
       ConstantsBuilder.create()
