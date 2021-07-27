@@ -51,7 +51,7 @@ object MergeBox {
           .contract(new ErgoTreeContract(our.getErgoAddress.script))
           .build()
 
-        val tx = txB.boxesToSpend((theBox :: ergBox).asJava)
+        val tx = txB.boxesToSpend((Seq(theBox) ++ ergBox).asJava)
           .outputs(newBox, feeBox)
           .fee(Configs.defaultTxFee)
           .sendChangeTo(our.getErgoAddress)
