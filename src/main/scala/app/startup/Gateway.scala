@@ -146,7 +146,7 @@ object Gateway {
       if (total < 1000000000000L) {
         println("Not enough erg, waiting for more ergs ...")
         Thread.sleep(2 * 60 * 1000)
-        boxes = ctx.getUnspentBoxesFor(our).asScala.toList.filter(box => box.getTokens.size() == 0)
+        boxes = ctx.getCoveringBoxesFor(our, (1e9*1e8).toLong).getBoxes.asScala.toList.filter(box => box.getTokens.size() == 0)
       }
     }
 
@@ -667,7 +667,7 @@ object Gateway {
          |}""".stripMargin
 
 
-    val boxes = ctx.getUnspentBoxesFor(our).asScala.toList.filter(box => box.getValue > 2 * Configs.defaultTxFee)
+    val boxes = ctx.getCoveringBoxesFor(our, (1e9*1e8).toLong).getBoxes.asScala.toList.filter(box => box.getValue > 2 * Configs.defaultTxFee)
     println(s"size: ${
       boxes.size
     }")
@@ -751,7 +751,7 @@ object Gateway {
       while (true) {
         Thread.sleep(5 * 1000)
         try {
-          ctx.getUnspentBoxesFor(Address.create(Configs.addressEncoder.fromProposition(gravityContract.getErgoTree).get.toString)).asScala.toList.head
+          ctx.getCoveringBoxesFor(Address.create(Configs.addressEncoder.fromProposition(gravityContract.getErgoTree).get.toString), (1e9*1e8).toLong).getBoxes.asScala.toList.head
           ctx.getBoxesById(oracleTokenBoxId)
           Thread.sleep(5 * 1000)
           break
@@ -763,13 +763,13 @@ object Gateway {
     }
 
     println("\n\t\t\tcreateOracleBox:")
-    createOracleBox(ctx, prover, feeBoxes.drop(1).head, ctx.getUnspentBoxesFor(Address.create(Configs.addressEncoder.fromProposition(gravityContract.getErgoTree).get.toString)).asScala.toList.head, oracleContract, oracleTokenBoxId)
+    createOracleBox(ctx, prover, feeBoxes.drop(1).head, ctx.getCoveringBoxesFor(Address.create(Configs.addressEncoder.fromProposition(gravityContract.getErgoTree).get.toString), (1e9*1e8).toLong).getBoxes.asScala.toList.head, oracleContract, oracleTokenBoxId)
 
     breakable {
       while (true) {
         Thread.sleep(5 * 1000)
         try {
-          ctx.getUnspentBoxesFor(Address.create(Configs.addressEncoder.fromProposition(oracleContract.getErgoTree).get.toString)).asScala.toList.head
+          ctx.getCoveringBoxesFor(Address.create(Configs.addressEncoder.fromProposition(oracleContract.getErgoTree).get.toString), (1e9*1e8).toLong).getBoxes.asScala.toList.head
           ctx.getBoxesById(pulseTokenBoxId)
           Thread.sleep(5 * 1000)
           break
@@ -781,7 +781,7 @@ object Gateway {
     }
 
     println("\n\t\t\tcreatePulseBox:")
-    createPulseBox(ctx, prover, feeBoxes.drop(2).head, ctx.getUnspentBoxesFor(Address.create(Configs.addressEncoder.fromProposition(oracleContract.getErgoTree).get.toString)).asScala.toList.head, pulseContract, pulseTokenBoxId)
+    createPulseBox(ctx, prover, feeBoxes.drop(2).head, ctx.getCoveringBoxesFor(Address.create(Configs.addressEncoder.fromProposition(oracleContract.getErgoTree).get.toString), (1e9*1e8).toLong).getBoxes.asScala.toList.head, pulseContract, pulseTokenBoxId)
 
     breakable {
       while (true) {

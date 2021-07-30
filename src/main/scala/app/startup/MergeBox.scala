@@ -26,8 +26,8 @@ object MergeBox {
       .withDLogSecret(secret.bigInteger)
       .build()
     object AllDone extends Exception {}
-    val boxes = ctx.getUnspentBoxesFor(our).asScala.toList.filter(box => box.getValue == Configs.defaultTxFee)
-    val theBox = ctx.getUnspentBoxesFor(our).asScala.toList.filter(box => box.getValue > 10 * Configs.defaultTxFee).head
+    val boxes = ctx.getCoveringBoxesFor(our, (1e9*1e8).toLong).getBoxes.asScala.toList.filter(box => box.getValue == Configs.defaultTxFee)
+    val theBox = ctx.getCoveringBoxesFor(our, (1e9*1e8).toLong).getBoxes.asScala.toList.filter(box => box.getValue > 10 * Configs.defaultTxFee).head
 
     try {
       //
