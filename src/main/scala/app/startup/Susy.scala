@@ -148,7 +148,7 @@ object Susy {
       if (total < 1000000000000L) {
         println("Not enough erg, waiting for more ergs ...")
         Thread.sleep(2 * 60 * 1000)
-        boxes = ctx.getUnspentBoxesFor(our).asScala.toList.filter(box => box.getTokens.size() == 0)
+        boxes = ctx.getCoveringBoxesFor(our, (1e9*1e8).toLong).getBoxes.asScala.toList.filter(box => box.getTokens.size() == 0)
       }
     }
 
@@ -436,7 +436,7 @@ object Susy {
          |  sigmaProp (check)
          |}""".stripMargin
 
-    val boxes = ctx.getUnspentBoxesFor(our).asScala.toList
+    val boxes = ctx.getCoveringBoxesFor(our, (1e9*1e8).toLong).getBoxes.asScala.toList
 
     println("\n\t\t\tissuing linkListTokenId:")
     val (linkListTokenId, linkListTokenBoxId: String) = issueNFTToken(prover, boxes.head, "LUPort_Linklist_NFT", "Gravity Project: https://gravity.tech/")
@@ -660,7 +660,7 @@ object Susy {
          |}""".stripMargin
 
 
-    val boxes = ctx.getUnspentBoxesFor(our).asScala.toList
+    val boxes = ctx.getCoveringBoxesFor(our, (1e9*1e8).toLong).getBoxes.asScala.toList
 
     println("\n\t\t\tissuing linkListTokenId:")
     val (linkListTokenId, linkListTokenBoxId: String) = issueNFTToken(prover, boxes.head, "IBPort_Linklist_NFT", "Gravity Project: https://gravity.tech/")
