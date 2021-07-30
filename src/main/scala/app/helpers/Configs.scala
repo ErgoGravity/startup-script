@@ -12,7 +12,10 @@ object Configs extends ConfigHelper {
   lazy val defaultTxFee: Long = readKey("default.fee").toLong
   lazy val ourAddress: String = readKey("our.address")
   lazy val proverSecret: String = readKey("prover.secret")
-  lazy val tokenRepoTokenId: String = readKey("tokenRepoToken.id")
+  lazy val ergoTokenRepoTokenId: String = readKey("ergo.tokenRepoToken.id")
+  lazy val sigmaTokenRepoTokenId: String = readKey("sigma.tokenRepoToken.id")
+  lazy val SWTokenId : String = readKey("SWToken.id ")
+  lazy val gwSWTokenId: String = readKey("gwSWToken.id ")
   lazy val consulsPk = Seq(readKey("consulsPk.one"), readKey("consulsPk.two"), readKey("consulsPk.three"),
     readKey("consulsPk.four"), readKey("consulsPk.five"))
   lazy val consulsPriv = Seq(readKey("consulsPriv.one"), readKey("consulsPriv.two"), readKey("consulsPriv.three"),

@@ -6,10 +6,12 @@ import org.ergoplatform.appkit.{Address, BlockchainContext, ErgoClient, RestApiE
 
 object Utils {
   val ergoClient: ErgoClient = RestApiErgoClient.create(nodeUrl, networkType, nodeApiKey)
+
   def execute(configs: Config): Unit = {
 
     ergoClient.execute((ctx: BlockchainContext) => {
       configs.proxy.toLowerCase match {
+        //        case "gateway" => test.main()
         case "gateway" => Gateway.run(ctx)
         case "susy" => Susy.run(ctx)
       }
