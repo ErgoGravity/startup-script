@@ -11,7 +11,7 @@ resolvers += "Typesafe maven releases" at "https://dl.bintray.com/typesafe/maven
 resolvers += "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/"
 
 libraryDependencies ++= Seq(
-  "org.ergoplatform" %% "ergo-appkit" % "startup-appkit-local",
+  "org.ergoplatform" %% "ergo-appkit" % "develop-dd40e4e5-SNAPSHOT",
   "org.scalaj" %% "scalaj-http" % "2.4.2",
   "com.joefkelley" %% "argyle" % "1.0.0",
   "com.github.scopt" %% "scopt" % "4.0.1",
