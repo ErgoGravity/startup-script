@@ -18,6 +18,11 @@ import java.math.BigInteger
 import scala.collection.JavaConverters._
 
 object Gateway {
+
+  // TODO: Check, why consuls can not be empty? ("")
+  // TODO: Edit contract to be dynamic for number of consuls and oracles.
+  // TODO: Refactor code and use chain transaction.
+
   val secureRandom = new java.security.SecureRandom
   val our = Address.create(Configs.ourAddress)
 
@@ -145,8 +150,8 @@ object Gateway {
       }
       if (total < 1000000000000L) {
         println("Not enough erg, waiting for more ergs ...")
-        Thread.sleep(2 * 60 * 1000)
-        boxes = ctx.getCoveringBoxesFor(our, (1e9*1e8).toLong).getBoxes.asScala.toList.filter(box => box.getTokens.size() == 0)
+        Thread.sleep(3 * 60 * 1000)
+        boxes = ctx.getCoveringBoxesFor(our, (1e9 * 1e8).toLong).getBoxes.asScala.toList.filter(box => box.getTokens.size() == 0)
       }
     }
 
@@ -157,7 +162,7 @@ object Gateway {
 
     def CreateTokenBox(txB: UnsignedTransactionBuilder, numToken: Long, tokenBox: InputBox, addressTokenRepo: Address) = {
       txB.outBoxBuilder
-        .value(1000000L * numToken)
+        .value(1000000L * (numToken))
         .tokens(new ErgoToken(tokenBox.getTokens.get(0).getId, numToken))
         .contract(new ErgoTreeContract(addressTokenRepo.getErgoAddress.script))
         .build()
@@ -207,15 +212,17 @@ object Gateway {
 
     val txB = ctx.newTxBuilder()
 
-    val consuls = Configs.consulsPk
-    val consulsPri = Configs.consulsPriv
+    val consuls = Configs.consulsAddress.asScala.toList
+    val consulsPri = Configs.consulsPrivateKey.asScala.toList
     val consulsPrivateKey = consulsPri.map(BigInt(_, 16))
 
 
     def createGravity(txB: UnsignedTransactionBuilder, tokenBox: InputBox, gravityContract: ErgoContract, consuls: Seq[String], consulsPrivateKey: Seq[BigInt]): OutBox = {
       val bftValue = ErgoValue.of(3)
       val consulsAddress = consuls.map(Address.create(_).getPublicKeyGE.getEncoded)
-      val msg = consulsAddress.fold(JavaHelpers.collFrom("".getBytes))(_.append(_))
+
+      val firstRound = 0L
+      val msg = consulsAddress.fold(JavaHelpers.collFrom("".getBytes))(_.append(_)).append(JavaHelpers.collFrom(Array(firstRound.toByte)))
       val signs = consulsPrivateKey.map(sign(msg.toArray, _))
       val consulsValue = ErgoValue.of(IndexedSeq(consulsAddress: _*).toArray, ErgoType.collType(ErgoType.byteType))
       val lastround = ErgoValue.of(0L)
@@ -263,8 +270,8 @@ object Gateway {
     val tokenBox = ctx.getBoxesById(oracleTokenBoxId).head
     val txB = ctx.newTxBuilder()
 
-    val oracles = Configs.oraclesPk
-    val oraclesPri = Configs.oraclesPriv
+    val oracles = Configs.oraclesAddress.asScala.toList
+    val oraclesPri = Configs.oraclesPrivateKey.asScala.toList
     val oraclesPrivateKey = oraclesPri.map(BigInt(_, 16))
 
 
@@ -320,8 +327,8 @@ object Gateway {
 
     val txB = ctx.newTxBuilder()
 
-    val oracles = Configs.oraclesPk
-    val oraclesPri = Configs.oraclesPriv
+    val oracles = Configs.oraclesAddress.asScala.toList
+    val oraclesPri = Configs.oraclesPrivateKey.asScala.toList
     val oraclesPrivateKey = oraclesPri.map(BigInt(_, 16))
 
     def createPulse(txB: UnsignedTransactionBuilder, tokenBox: InputBox, pulseContract: ErgoContract, oraclesPrivateKey: Seq[BigInt]): OutBox = {
@@ -667,19 +674,20 @@ object Gateway {
          |}""".stripMargin
 
 
-    val boxes = ctx.getCoveringBoxesFor(our, (1e9*1e8).toLong).getBoxes.asScala.toList.filter(box => box.getValue > 2 * Configs.defaultTxFee)
+    val boxes = ctx.getCoveringBoxesFor(our, (1e9 * 1e8).toLong).getBoxes.asScala.toList.filter(box => box.getValue > 2 * Configs.defaultTxFee)
     println(s"size: ${
       boxes.size
     }")
 
     println("\n\t\t\tissuing gravityTokenId:")
-    val (gravityTokenId, gravityTokenBoxId: String) = issueNFTToken(prover, boxes.head, "Gravity_NFT_erg", "Gravity Project: https://gravity.tech/")
+    val (gravityTokenId, gravityTokenBoxId: String) = issueNFTToken(prover, boxes.head, "Gravity_NFT_sigma", "Gravity Project: https://gravity.tech/")
     println("\n\t\t\tissuing oracleTokenId:")
-    val (oracleTokenId, oracleTokenBoxId: String) = issueNFTToken(prover, boxes.drop(1).head, "Oracle_NFT_erg", "Gravity Project: https://gravity.tech/")
+    val (oracleTokenId, oracleTokenBoxId: String) = issueNFTToken(prover, boxes.drop(1).head, "Oracle_NFT_sigma", "Gravity Project: https://gravity.tech/")
     println("\n\t\t\tissuing pulseTokenId:")
-    val (pulseTokenId, pulseTokenBoxId: String) = issueNFTToken(prover, boxes.drop(2).head, "Pulse_NFT_erg", "Gravity Project: https://gravity.tech/")
+    val (pulseTokenId, pulseTokenBoxId: String) = issueNFTToken(prover, boxes.drop(2).head, "Pulse_NFT_sigma", "Gravity Project: https://gravity.tech/")
     println("\n\t\t\tissuing tokenRepoTokenId:")
-    val (tokenRepoTokenId, tokenRepoTokenBoxId: String) = issueToken(prover, boxes.drop(3).head, "TokenRepo_erg", "Gravity Project: https://gravity.tech/")
+    val (tokenRepoTokenId, tokenRepoTokenBoxId: String) = issueToken(prover, boxes.drop(3).head, "TokenRepo_sigma", "Gravity Project: https://gravity.tech/")
+
 
     val tokenRepoContract: ErgoContract = ctx.compileContract(
       ConstantsBuilder.create()
@@ -751,7 +759,7 @@ object Gateway {
       while (true) {
         Thread.sleep(5 * 1000)
         try {
-          ctx.getCoveringBoxesFor(Address.create(Configs.addressEncoder.fromProposition(gravityContract.getErgoTree).get.toString), (1e9*1e8).toLong).getBoxes.asScala.toList.head
+          ctx.getCoveringBoxesFor(Address.create(Configs.addressEncoder.fromProposition(gravityContract.getErgoTree).get.toString), (1e9 * 1e8).toLong).getBoxes.asScala.toList.head
           ctx.getBoxesById(oracleTokenBoxId)
           Thread.sleep(5 * 1000)
           break
@@ -763,13 +771,13 @@ object Gateway {
     }
 
     println("\n\t\t\tcreateOracleBox:")
-    createOracleBox(ctx, prover, feeBoxes.drop(1).head, ctx.getCoveringBoxesFor(Address.create(Configs.addressEncoder.fromProposition(gravityContract.getErgoTree).get.toString), (1e9*1e8).toLong).getBoxes.asScala.toList.head, oracleContract, oracleTokenBoxId)
+    createOracleBox(ctx, prover, feeBoxes.drop(1).head, ctx.getCoveringBoxesFor(Address.create(Configs.addressEncoder.fromProposition(gravityContract.getErgoTree).get.toString), (1e9 * 1e8).toLong).getBoxes.asScala.toList.head, oracleContract, oracleTokenBoxId)
 
     breakable {
       while (true) {
         Thread.sleep(5 * 1000)
         try {
-          ctx.getCoveringBoxesFor(Address.create(Configs.addressEncoder.fromProposition(oracleContract.getErgoTree).get.toString), (1e9*1e8).toLong).getBoxes.asScala.toList.head
+          ctx.getCoveringBoxesFor(Address.create(Configs.addressEncoder.fromProposition(oracleContract.getErgoTree).get.toString), (1e9 * 1e8).toLong).getBoxes.asScala.toList.head
           ctx.getBoxesById(pulseTokenBoxId)
           Thread.sleep(5 * 1000)
           break
@@ -781,7 +789,7 @@ object Gateway {
     }
 
     println("\n\t\t\tcreatePulseBox:")
-    createPulseBox(ctx, prover, feeBoxes.drop(2).head, ctx.getCoveringBoxesFor(Address.create(Configs.addressEncoder.fromProposition(oracleContract.getErgoTree).get.toString), (1e9*1e8).toLong).getBoxes.asScala.toList.head, pulseContract, pulseTokenBoxId)
+    createPulseBox(ctx, prover, feeBoxes.drop(2).head, ctx.getCoveringBoxesFor(Address.create(Configs.addressEncoder.fromProposition(oracleContract.getErgoTree).get.toString), (1e9 * 1e8).toLong).getBoxes.asScala.toList.head, pulseContract, pulseTokenBoxId)
 
     breakable {
       while (true) {
@@ -796,8 +804,8 @@ object Gateway {
         }
       }
     }
+
     println("\n\t\t\tcreateTokenRepoBox:")
     createTokenRepoBox(ctx, prover, feeBoxes.drop(3), tokenRepoContract, tokenRepoTokenBoxId)
-
   }
 }
