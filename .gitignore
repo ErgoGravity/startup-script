@@ -16,3 +16,6 @@ dist
 /.settings
 .DS_Store
 result_*/
+application.conf
+application_sigma.conf
+*.7z

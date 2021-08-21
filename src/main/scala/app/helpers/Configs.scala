@@ -11,15 +11,18 @@ object Configs extends ConfigHelper {
   private lazy val explorerUrlConf = readKey("explorer.url", "")
   lazy val explorerUrl: String = if (explorerUrlConf.isEmpty) RestApiErgoClient.getDefaultExplorerUrl(Configs.networkType) else explorerUrlConf
   lazy val defaultTxFee: Long = readKey("default.fee").toLong
+
   lazy val ourAddress: String = readKey("our.address")
   lazy val proverSecret: String = readKey("prover.secret")
-  lazy val tokenRepoTokenId: String = readKey("tokenRepoToken.id")
-  lazy val consulsPk = Seq(readKey("consulsPk.one"), readKey("consulsPk.two"), readKey("consulsPk.three"),
-    readKey("consulsPk.four"), readKey("consulsPk.five"))
-  lazy val consulsPriv = Seq(readKey("consulsPriv.one"), readKey("consulsPriv.two"), readKey("consulsPriv.three"),
-    readKey("consulsPriv.four"), readKey("consulsPriv.five"))
-  lazy val oraclesPk = Seq(readKey("oraclesPk.one"), readKey("oraclesPk.two"), readKey("oraclesPk.three"),
-    readKey("oraclesPk.four"), readKey("oraclesPk.five"))
-  lazy val oraclesPriv = Seq(readKey("oraclesPriv.one"), readKey("oraclesPriv.two"), readKey("oraclesPriv.three"),
-    readKey("oraclesPriv.four"), readKey("oraclesPriv.five"))
-  }
+
+  lazy val ergoTokenRepoTokenId: String = readKey("ergo.tokenRepoToken.id")
+  lazy val sigmaTokenRepoTokenId: String = readKey("sigma.tokenRepoToken.id")
+  lazy val sWTokenId: String = readKey("SWToken.id ")
+  lazy val gwSWTokenId: String = readKey("gwSWToken.id ")
+
+  lazy val consulsAddress: java.util.List[String] = readobject("consulsAddress")
+  lazy val consulsPrivateKey: java.util.List[String] = readobject("consulsPrivateKey")
+  lazy val oraclesAddress: java.util.List[String] = readobject("oraclesAddress")
+  lazy val oraclesPrivateKey: java.util.List[String] = readobject("oraclesPrivateKey")
+
+}

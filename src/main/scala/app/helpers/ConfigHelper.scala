@@ -1,9 +1,19 @@
 package app.helpers
 
-import com.typesafe.config.{ Config, ConfigFactory }
+import com.typesafe.config.{Config, ConfigFactory}
 
 trait ConfigHelper {
-  val config: Config  = ConfigFactory.load()
+  val config: Config = ConfigFactory.load("application.conf")
+
+  def readobject(key: String): java.util.List[String] = {
+    try {
+      config.getStringList(key)
+    } catch {
+      case ex: Throwable =>
+        println(s"${key} is required.")
+        sys.exit()
+    }
+  }
 
   /**
    * Read the config and return the value of the key
