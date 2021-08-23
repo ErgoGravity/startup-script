@@ -46,7 +46,7 @@ object Susy {
     addrEnc.fromProposition(contract.getErgoTree).get.toString
   }
 
-  def issueNFTToken(prover: ErgoProver, box: InputBox, tokenName: String, tokenDescription: String): (String, String) = {
+  def issueNFTToken(prover: ErgoProver, box: InputBox, tokenName: String, tokenDescription: String): (String, InputBox) = {
     Utils.ergoClient.execute((ctx: BlockchainContext) => {
       val txB = ctx.newTxBuilder()
       val id = box.getId.toString
@@ -87,12 +87,12 @@ object Susy {
         close()
       }
       println(txId)
-      (id, signed.getOutputsToSpend.get(0).getId.toString)
+      (id, signed.getOutputsToSpend.get(0))
     })
     //    tokenId
   }
 
-  def issueToken(prover: ErgoProver, box: InputBox, tokenName: String, tokenDescription: String, issuingNum: Long = 1000000L): (String, String) = {
+  def issueToken(prover: ErgoProver, box: InputBox, tokenName: String, tokenDescription: String, issuingNum: Long = 1000000L): (String, InputBox) = {
     Utils.ergoClient.execute((ctx: BlockchainContext) => {
 
       val txB = ctx.newTxBuilder()
@@ -133,7 +133,7 @@ object Susy {
         close()
       }
       println(txId)
-      (id, signed.getOutputsToSpend.get(0).getId.toString)
+      (id, signed.getOutputsToSpend.get(0))
     })
     //    tokenId
   }
@@ -147,11 +147,8 @@ object Susy {
     })
   }
 
-  def createLinkListBox(ctx: BlockchainContext, prover: ErgoProver, boxFee: List[InputBox], linkListRepoContract: ErgoContract, linkListTokenBoxId: String, linkListTokenRepoBoxId: String): Unit = {
-    val tokenNFTBox = ctx.getBoxesById(linkListTokenBoxId).head
-    val tokenBox = ctx.getBoxesById(linkListTokenRepoBoxId).head
+  def createLinkListBox(ctx: BlockchainContext, prover: ErgoProver, boxFee: List[InputBox], linkListRepoContract: ErgoContract, linkListTokenBox: InputBox, linkListTokenRepoBox: InputBox): Unit = {
     val txB = ctx.newTxBuilder()
-
 
     var boxes = boxFee.filter(box => box.getValue > 100 * Configs.defaultTxFee)
 
@@ -159,7 +156,7 @@ object Susy {
     var total = 0L
     object AllDone extends Exception {}
 
-    val maxValue = Configs.defaultTxFee * (tokenBox.getTokens.get(0).getValue + 4)
+    val maxValue = Configs.defaultTxFee * (linkListTokenRepoBox.getTokens.get(0).getValue + 4)
     while (total < maxValue) {
       total = 0L
       for (box <- boxes) {
@@ -189,13 +186,13 @@ object Susy {
 
     def createChangeBoxes(txB: UnsignedTransactionBuilder, ownerAddress: Address): OutBox = {
       txB.outBoxBuilder
-        .value(total - Configs.defaultTxFee * (tokenBox.getTokens.get(0).getValue + 2))
+        .value(total - Configs.defaultTxFee * (linkListTokenRepoBox.getTokens.get(0).getValue + 2))
         .contract(new ErgoTreeContract(ownerAddress.getErgoAddress.script))
         .build()
     }
 
-    val tx = txB.boxesToSpend((Seq(tokenNFTBox, tokenBox) ++ ergBox).asJava)
-      .outputs(createLinkListRepo(txB, tokenNFTBox, tokenBox, linkListRepoContract),
+    val tx = txB.boxesToSpend((Seq(linkListTokenBox, linkListTokenRepoBox) ++ ergBox).asJava)
+      .outputs(createLinkListRepo(txB, linkListTokenBox, linkListTokenRepoBox, linkListRepoContract),
         createChangeBoxes(txB, our))
       .fee(Configs.defaultTxFee)
       .sendChangeTo(our.getErgoAddress)
@@ -225,9 +222,7 @@ object Susy {
     println(txId)
   }
 
-
-  def createMaintainerBox(ctx: BlockchainContext, prover: ErgoProver, boxFee: InputBox, maintainerRepoContract: ErgoContract, maintainerTokenBoxId: String, TokenId: String): Unit = {
-    val tokenNFTBox = ctx.getBoxesById(maintainerTokenBoxId).head
+  def createMaintainerBox(ctx: BlockchainContext, prover: ErgoProver, boxFee: InputBox, maintainerRepoContract: ErgoContract, maintainerTokenBox: InputBox, TokenId: String): Unit = {
 
     val tokenBox = ctx.getCoveringBoxesFor(our, (1e9 * 1e8).toLong).getBoxes.asScala.toList.filter(box => {
       box.getTokens.size() > 0 && box.getTokens.get(0).getId.toString.equals(TokenId)
@@ -238,7 +233,7 @@ object Susy {
     def createMaintainerRepo(txB: UnsignedTransactionBuilder, tokenNFTBox: InputBox, tokenBox: InputBox, maintainerRepoContract: ErgoContract): OutBox = {
       val fee: Int = 0
       txB.outBoxBuilder
-        .value(tokenNFTBox.getValue + tokenBox.getValue)
+        .value(tokenNFTBox.getValue + Configs.defaultTxFee)
         .tokens(new ErgoToken(tokenNFTBox.getTokens.get(0).getId, 1),
           new ErgoToken(tokenBox.getTokens.get(0).getId, 1))
         .registers(ErgoValue.of(fee))
@@ -248,14 +243,14 @@ object Susy {
 
     def createChangeBoxes(txB: UnsignedTransactionBuilder, inputFeeBox: InputBox, feeAmount: Long, ownerAddress: Address): OutBox = {
       txB.outBoxBuilder
-        .value(inputFeeBox.getValue - feeAmount)
+        .value(tokenBox.getValue)
         .tokens(new ErgoToken(tokenBox.getTokens.get(0).getId, tokenBox.getTokens.get(0).getValue - 1))
         .contract(new ErgoTreeContract(ownerAddress.getErgoAddress.script))
         .build()
     }
 
-    val tx = txB.boxesToSpend(Seq(tokenNFTBox, tokenBox, boxFee).asJava)
-      .outputs(createMaintainerRepo(txB, tokenNFTBox, tokenBox, maintainerRepoContract),
+    val tx = txB.boxesToSpend(Seq(maintainerTokenBox, tokenBox, boxFee).asJava)
+      .outputs(createMaintainerRepo(txB, maintainerTokenBox, tokenBox, maintainerRepoContract),
         createChangeBoxes(txB, boxFee, Configs.defaultTxFee, our))
       .fee(Configs.defaultTxFee)
       .sendChangeTo(our.getErgoAddress)
@@ -443,16 +438,18 @@ object Susy {
          |  sigmaProp (check)
          |}""".stripMargin
 
-    var boxes = ctx.getCoveringBoxesFor(our, (1e9 * 1e8).toLong).getBoxes.asScala.toList.filter(box => box.getTokens.size == 0 && box.getValue > 2 * Configs.defaultTxFee)
+    val boxes = ctx.getCoveringBoxesFor(our, (1e9 * 1e8).toLong).getBoxes.asScala.toList
+      .filter(box => box.getTokens.size == 0 && box.getValue > 2 * Configs.defaultTxFee)
+      .sortWith((s, t) => s.getValue < t.getValue)
     println(s"size: ${
       boxes.size
     }")
     println("\n\t\t\tissuing linkListTokenId:")
-    val (linkListTokenId, linkListTokenBoxId: String) = issueNFTToken(prover, boxes.head, "LUPort_Linklist_NFT", "Gravity Project: https://gravity.tech/")
+    val (linkListTokenId, linkListTokenBox) = issueNFTToken(prover, boxes.head, "LUPort_Linklist_NFT", "Gravity Project: https://gravity.tech/")
     println("\n\t\t\tissuing maintainerTokenId:")
-    val (maintainerTokenId, maintainerTokenBoxId: String) = issueNFTToken(prover, boxes.drop(1).head, "LUPort_Maintainer_NFT", "Gravity Project: https://gravity.tech/")
+    val (maintainerTokenId, maintainerTokenBox) = issueNFTToken(prover, boxes.drop(1).head, "LUPort_Maintainer_NFT", "Gravity Project: https://gravity.tech/")
     println("\n\t\t\tissuing linkListTokenRepoTokenId:")
-    val (linkListRepoTokenId, linkListRepoTokenBoxId: String) = issueToken(prover, boxes.drop(2).head, "LUPort_LinkListTokenRepo", "Gravity Project: https://gravity.tech/")
+    val (linkListRepoTokenId, linkListRepoTokenBox) = issueToken(prover, boxes.drop(2).head, "LUPort_LinkListTokenRepo", "Gravity Project: https://gravity.tech/")
 
     lazy val linkListElementContract: ErgoContract = ctx.compileContract(
       ConstantsBuilder.create()
@@ -491,43 +488,14 @@ object Susy {
       maintainerRepoScript
     )
 
-    val boxFee = boxes.drop(3)
-
-    breakable {
-      while (true) {
-        Thread.sleep(5 * 1000)
-        try {
-          ctx.getBoxesById(linkListTokenBoxId)
-          Thread.sleep(5 * 1000)
-          break
-        }
-        catch {
-          case e: Exception =>
-        }
-      }
-    }
-    println("\n\t\t\tcreateLinkListBox:")
-    createLinkListBox(ctx, prover, boxFee, linkListRepoContract, linkListTokenBoxId, linkListRepoTokenBoxId)
-
-    breakable {
-      while (true) {
-        Thread.sleep(5 * 1000)
-        try {
-          ctx.getBoxesById(maintainerTokenBoxId)
-          ctx.getCoveringBoxesFor(Address.create(Configs.addressEncoder.fromProposition(linkListRepoContract.getErgoTree).get.toString), (1e9 * 1e8).toLong).getBoxes.asScala.toList.head
-          Thread.sleep(5 * 1000)
-          break
-        }
-        catch {
-          case e: Exception =>
-        }
-      }
-    }
-
-    boxes = ctx.getCoveringBoxesFor(our, (1e9 * 1e8).toLong).getBoxes.asScala.toList
-    val box = boxes.filter(box => box.getTokens.size() == 0 && box.getValue > 2 * Configs.defaultTxFee).head
     println("\n\t\t\tcreateMaintainerBox:")
-    createMaintainerBox(ctx, prover, box, maintainerRepoContract, maintainerTokenBoxId, Configs.sWTokenId)
+    createMaintainerBox(ctx, prover, boxes.drop(3).head, maintainerRepoContract, maintainerTokenBox, Configs.sWTokenId)
+
+    val boxFee = boxes.drop(4)
+
+    println("\n\t\t\tcreateLinkListBox:")
+    createLinkListBox(ctx, prover, boxFee, linkListRepoContract, linkListTokenBox, linkListRepoTokenBox)
+
   }
 
   def runIBPort(ctx: BlockchainContext, tokenRepoTokenId: String): Unit = {
@@ -688,16 +656,16 @@ object Susy {
          |  sigmaProp (check)
          |}""".stripMargin
 
-    var boxes = ctx.getCoveringBoxesFor(our, (1e9 * 1e8).toLong).getBoxes.asScala.toList.filter(box => box.getTokens.size == 0 && box.getValue > 2 * Configs.defaultTxFee)
+    val boxes = ctx.getCoveringBoxesFor(our, (1e9 * 1e8).toLong).getBoxes.asScala.toList.filter(box => box.getTokens.size == 0 && box.getValue > 2 * Configs.defaultTxFee)
     println(s"size: ${
       boxes.size
     }")
     println("\n\t\t\tissuing linkListTokenId:")
-    val (linkListTokenId, linkListTokenBoxId: String) = issueNFTToken(prover, boxes.head, "IBPort_Linklist_NFT", "Gravity Project: https://gravity.tech/")
+    val (linkListTokenId, linkListTokenBox) = issueNFTToken(prover, boxes.head, "IBPort_Linklist_NFT", "Gravity Project: https://gravity.tech/")
     println("\n\t\t\tissuing maintainerTokenId:")
-    val (maintainerTokenId, maintainerTokenBoxId: String) = issueNFTToken(prover, boxes.drop(1).head, "IBPort_Maintainer_NFT", "Gravity Project: https://gravity.tech/")
+    val (maintainerTokenId, maintainerTokenBox) = issueNFTToken(prover, boxes.drop(1).head, "IBPort_Maintainer_NFT", "Gravity Project: https://gravity.tech/")
     println("\n\t\t\tissuing linkListTokenRepoTokenId:")
-    val (linkListRepoTokenId, linkListRepoTokenBoxId: String) = issueToken(prover, boxes.drop(2).head, "IBPort_LinkListTokenRepo", "Gravity Project: https://gravity.tech/")
+    val (linkListRepoTokenId, linkListRepoTokenBox) = issueToken(prover, boxes.drop(2).head, "IBPort_LinkListTokenRepo", "Gravity Project: https://gravity.tech/")
 
     lazy val linkListElementContract: ErgoContract = ctx.compileContract(
       ConstantsBuilder.create()
@@ -736,43 +704,13 @@ object Susy {
       maintainerRepoScript
     )
 
-    val boxFee = boxes.drop(3)
-
-    breakable {
-      while (true) {
-        Thread.sleep(5 * 1000)
-        try {
-          ctx.getBoxesById(linkListTokenBoxId)
-          Thread.sleep(5 * 1000)
-          break
-        }
-        catch {
-          case e: Exception =>
-        }
-      }
-    }
-    println("\n\t\t\tcreateLinkListBox:")
-    createLinkListBox(ctx, prover, boxFee, linkListRepoContract, linkListTokenBoxId, linkListRepoTokenBoxId)
-
-    breakable {
-      while (true) {
-        Thread.sleep(5 * 1000)
-        try {
-          ctx.getBoxesById(maintainerTokenBoxId)
-          ctx.getCoveringBoxesFor(Address.create(Configs.addressEncoder.fromProposition(linkListRepoContract.getErgoTree).get.toString), (1e9 * 1e8).toLong).getBoxes.asScala.toList.head
-          Thread.sleep(5 * 1000)
-          break
-        }
-        catch {
-          case e: Exception =>
-        }
-      }
-    }
-
-    boxes = ctx.getCoveringBoxesFor(our, (1e9 * 1e8).toLong).getBoxes.asScala.toList
-    val box = boxes.filter(box => box.getTokens.size() == 0 && box.getValue > 2 * Configs.defaultTxFee).head
     println("\n\t\t\tcreateMaintainerBox:")
-    createMaintainerBox(ctx, prover, box, maintainerRepoContract, maintainerTokenBoxId, Configs.gwSWTokenId)
+    createMaintainerBox(ctx, prover, boxes.drop(3).head, maintainerRepoContract, maintainerTokenBox, Configs.gwSWTokenId)
+
+    val boxFee = boxes.drop(4)
+
+    println("\n\t\t\tcreateLinkListBox:")
+    createLinkListBox(ctx, prover, boxFee, linkListRepoContract, linkListTokenBox, linkListRepoTokenBox)
 
   }
 
@@ -784,17 +722,16 @@ object Susy {
     //    val prover = ctx.newProverBuilder()
     //      .withDLogSecret(secret.bigInteger)
     //      .build()
-    //    val boxes = ctx.getUnspentBoxesFor(our, 0, 500).asScala.toList
+    //    val boxes = ctx.getCoveringBoxesFor(our, (1e9 * 1e8).toLong).getBoxes.asScala.toList
     //      .filter(box => box.getTokens.size == 0 && box.getValue > 2 * Configs.defaultTxFee)
     //    println(boxes.size)
-    //    val (a, gwSWTokenBoxId: String) = issueToken(prover, boxes.head, "gwSWToken", "gravity wrap token", 100)
-    ////    val (b, sWTokenBoxId: String) = issueToken(prover, boxes.head, "SWToken", "gravity token", 100)
+    //    val (sWTokenId, sWTokenBox) = issueToken(prover, boxes.head, "SWToken", "gravity token", 1000)
+    //    println(s"SWTokenId: ${sWTokenId},\n SWTokenBoxId: ${sWTokenBox.getId.toString} ")
+    //    val (gwSWTokenId, gwSWTokenBox) = issueToken(prover, boxes.head, "gwSWToken", "gravity wrap token", 1000)
+    //    println(s"gwSWTokenId: ${gwSWTokenId},\n gwSWTokenBoxId: ${gwSWTokenBox.getId.toString} ")
     //
-    ////    println(s"SWTokenId: ${b},\n SWTokenBoxId: ${sWTokenBoxId} ")
-    //    println(s"gwSWTokenId: ${a},\n gwSWTokenBoxId: ${gwSWTokenBoxId} ")
-
-    println("\n\t\t\tLUPort:")
-    runLUPort(ctx, Configs.sigmaTokenRepoTokenId)
+    //    println("\n\t\t\tLUPort:")
+    //    runLUPort(ctx, Configs.sigmaTokenRepoTokenId)
 
     println("\n\t\t\tIBPort:")
     runIBPort(ctx, Configs.ergoTokenRepoTokenId)
