@@ -5,8 +5,9 @@ import app.helpers.Configs.{explorerUrl, networkType, nodeApiKey, nodeUrl}
 import org.ergoplatform.appkit.{Address, BlockchainContext, ErgoClient, RestApiErgoClient}
 
 object Utils {
-  val ergoClient: ErgoClient = RestApiErgoClient.create(nodeUrl, networkType, nodeApiKey)
+  val ergoClient: ErgoClient = RestApiErgoClient.create(nodeUrl, networkType, nodeApiKey, explorerUrl)
 
+  println(Configs.nodeUrl)
   def execute(configs: Config): Unit = {
 
     ergoClient.execute((ctx: BlockchainContext) => {
