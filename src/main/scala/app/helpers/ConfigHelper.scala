@@ -3,7 +3,7 @@ package app.helpers
 import com.typesafe.config.{Config, ConfigFactory}
 
 trait ConfigHelper {
-  val config: Config = ConfigFactory.load("application.conf")
+  val config: Config = ConfigFactory.load("application_sigma.conf")
 
   def readobject(key: String): java.util.List[String] = {
     try {
