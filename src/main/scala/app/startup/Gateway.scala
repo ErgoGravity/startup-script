@@ -68,7 +68,6 @@ object Gateway {
         .build()
 
       val signed: SignedTransaction = prover.sign(tx)
-      println(signed.toJson(false))
       new PrintWriter(s"result_gateway/${tokenName}_signed.txt") {
         write(signed.toJson(false))
         close()
@@ -78,10 +77,9 @@ object Gateway {
         write(txId)
         close()
       }
-      println(txId)
+      println(s"txId: $txId")
       (id, signed.getOutputsToSpend.get(0))
     })
-    //    tokenId
   }
 
   def issueToken(prover: ErgoProver, box: InputBox, tokenName: String, tokenDescription: String): (String, InputBox) = {
@@ -105,7 +103,6 @@ object Gateway {
         .build()
 
       val signed: SignedTransaction = prover.sign(tx)
-      println(signed.toJson(false))
       new PrintWriter(s"result_gateway/${tokenName}_signed.txt") {
         write(signed.toJson(false))
         close()
@@ -115,10 +112,9 @@ object Gateway {
         write(txId)
         close()
       }
-      println(txId)
+      println(s"txId: $txId")
       (id, signed.getOutputsToSpend.get(0))
     })
-    //    tokenId
   }
 
   def randomAddr(): Unit = {
@@ -195,13 +191,12 @@ object Gateway {
       write(signed.toJson(false));
       close()
     }
-    println(signed.toJson(false))
     val txId = ctx.sendTransaction(signed)
     new PrintWriter("result_gateway/TokenRepoBox_txId.txt") {
       write(txId)
       close()
     }
-    println(txId)
+    println(s"txId: $txId")
   }
 
   def createGravityBox(ctx: BlockchainContext, prover: ErgoProver, boxFee: InputBox, gravityContract: ErgoContract, gravityTokenBox: InputBox): InputBox = {
@@ -251,13 +246,12 @@ object Gateway {
       write(signed.toJson(false));
       close()
     }
-    println(signed.toJson(false))
     val txId = ctx.sendTransaction(signed)
     new PrintWriter("result_gateway/GravityBox_txId.txt") {
       write(txId);
       close()
     }
-    println(txId)
+    println(s"txId: $txId")
 
     signed.getOutputsToSpend.get(0)
   }
@@ -308,12 +302,11 @@ object Gateway {
       close()
     }
     val txId = ctx.sendTransaction(signed)
-    println(signed.toJson(false))
     new PrintWriter("result_gateway/OracleBox_txId.txt") {
       write(txId);
       close()
     }
-    println(txId)
+    println(s"txId: $txId")
 
     signed.getOutputsToSpend.get(0)
   }
@@ -329,13 +322,13 @@ object Gateway {
       val msgData = Base16.encode("create first pulse box".getBytes).getBytes()
       val msgValue = ErgoValue.of(msgData)
       val signs = oraclesPrivateKey.map(sign(msgData, _))
-      val pulseId = ErgoValue.of(2000L)
+      val pulseId = ErgoValue.of(0L)
 
       val signs_a = ErgoValue.of(signs.map(sign => sign._1).toArray, ErgoType.groupElementType)
       val signs_z = ErgoValue.of(signs.map(sign => sign._2).toArray, ErgoType.bigIntType)
 
       val signalCreated = ErgoValue.of(1)
-      val dataType = ErgoValue.of(0)
+      val dataType = ErgoValue.of(1)
 
       txB.outBoxBuilder
         .value(tokenBox.getValue)
@@ -366,12 +359,11 @@ object Gateway {
       close()
     }
     val txId = ctx.sendTransaction(signed)
-    println(signed.toJson(false))
     new PrintWriter("result_gateway/PulseBox_txId.txt") {
       write(txId);
       close()
     }
-    println(txId)
+    println(s"txId: $txId")
 
   }
 
@@ -681,6 +673,16 @@ object Gateway {
     println("\n\t\t\tissuing tokenRepoTokenId:")
     val (tokenRepoTokenId, tokenRepoTokenBox: InputBox) = issueToken(prover, boxes.drop(3).head, "TokenRepo", "Gravity Project: https://gravity.tech/")
 
+    val tokens = Map("gravityTokenId" -> gravityTokenId, "oracleTokenId" -> oracleTokenId, "pulseTokenId" -> pulseTokenId, "tokenRepoTokenId" -> tokenRepoTokenId)
+    new PrintWriter("result_gateway/tokens.txt") {
+      write("tokens: {\n")
+      tokens.foreach {
+        case (k, v) =>
+          write("\t" + k + ": " + v + "\n")
+      }
+      write("}")
+      close()
+    }
 
     val tokenRepoContract: ErgoContract = ctx.compileContract(
       ConstantsBuilder.create()
