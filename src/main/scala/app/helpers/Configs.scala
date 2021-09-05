@@ -15,10 +15,9 @@ object Configs extends ConfigHelper {
   lazy val ourAddress: String = readKey("our.address")
   lazy val proverSecret: String = readKey("prover.secret")
 
-  lazy val ergoTokenRepoTokenId: String = readKey("ergo.tokenRepoToken.id")
-  lazy val sigmaTokenRepoTokenId: String = readKey("sigma.tokenRepoToken.id")
-  lazy val sWTokenId: String = readKey("SWToken.id ")
-  lazy val gwSWTokenId: String = readKey("gwSWToken.id ")
+  lazy val tokenRepoTokenId: String = readKey("tokenRepoToken.id")
+  lazy val tokenId: String = readKey("token.id ")
+  lazy val gwTokenId: String = readKey("gwToken.id ")
 
   lazy val consulsAddress: java.util.List[String] = readobject("consulsAddress")
   lazy val consulsPrivateKey: java.util.List[String] = readobject("consulsPrivateKey")
