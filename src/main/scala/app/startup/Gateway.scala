@@ -22,7 +22,7 @@ object Gateway {
   // TODO: Edit contract to be dynamic for number of consuls and oracles.
 
   val secureRandom = new java.security.SecureRandom
-  val our = Address.create(Configs.ourAddress)
+  val feeAddress = Address.create(Configs.feeAddress)
 
   def randBigInt: BigInt = new BigInteger(256, secureRandom)
 
@@ -58,13 +58,13 @@ object Gateway {
         .registers(ErgoValue.of(tokenName.getBytes("utf-8")),
           ErgoValue.of(tokenDescription.getBytes("utf-8")), ErgoValue.of("0".getBytes("utf-8")), ErgoValue.of(Array(1.toByte)))
         .tokens(new ErgoToken(id, issuingNum))
-        .contract(new ErgoTreeContract(our.getErgoAddress.script))
+        .contract(new ErgoTreeContract(feeAddress.getErgoAddress.script))
         .build()
 
       val tx = txB.boxesToSpend(Seq(box).asJava)
         .outputs(newBox)
         .fee(Configs.defaultTxFee)
-        .sendChangeTo(our.getErgoAddress)
+        .sendChangeTo(feeAddress.getErgoAddress)
         .build()
 
       val signed: SignedTransaction = prover.sign(tx)
@@ -93,13 +93,13 @@ object Gateway {
         .registers(ErgoValue.of(tokenName.getBytes("utf-8")),
           ErgoValue.of(tokenDescription.getBytes("utf-8")), ErgoValue.of("0".getBytes("utf-8")))
         .tokens(new ErgoToken(id, issuingNum))
-        .contract(new ErgoTreeContract(our.getErgoAddress.script))
+        .contract(new ErgoTreeContract(feeAddress.getErgoAddress.script))
         .build()
 
       val tx = txB.boxesToSpend(Seq(box).asJava)
         .outputs(newBox)
         .fee(Configs.defaultTxFee)
-        .sendChangeTo(our.getErgoAddress)
+        .sendChangeTo(feeAddress.getErgoAddress)
         .build()
 
       val signed: SignedTransaction = prover.sign(tx)
@@ -145,7 +145,7 @@ object Gateway {
         println("Not enough erg, waiting for more ergs ...")
         Thread.sleep(3 * 60 * 1000)
         ergBox = List()
-        boxes = ctx.getCoveringBoxesFor(our, (1e9 * 1e8).toLong).getBoxes.asScala.toList.filter(box => box.getTokens.size() == 0)
+        boxes = ctx.getCoveringBoxesFor(feeAddress, (1e9 * 1e8).toLong).getBoxes.asScala.toList.filter(box => box.getTokens.size() == 0)
       }
     }
 
@@ -179,11 +179,11 @@ object Gateway {
 
     val numTokenBox = 10
     var outboxes: Seq[OutBox] = List.range(0, numTokenBox).map(x => CreateTokenBox(txB, 100, tokenRepoTokenBox, addressTokenRepo))
-    outboxes = outboxes ++ CreateChangeBoxes(txB, ergBox, total, tokenRepoTokenBox, 100L, numTokenBox, Configs.defaultTxFee, our)
+    outboxes = outboxes ++ CreateChangeBoxes(txB, ergBox, total, tokenRepoTokenBox, 100L, numTokenBox, Configs.defaultTxFee, feeAddress)
     val tx = txB.boxesToSpend((Seq(tokenRepoTokenBox) ++ ergBox).asJava)
       .outputs(outboxes: _*)
       .fee(Configs.defaultTxFee)
-      .sendChangeTo(our.getErgoAddress)
+      .sendChangeTo(feeAddress.getErgoAddress)
       .build()
 
     val signed: SignedTransaction = prover.sign(tx)
@@ -236,9 +236,9 @@ object Gateway {
 
     val tx = txB.boxesToSpend(Seq(gravityTokenBox, boxFee).asJava)
       .outputs(createGravity(txB, gravityTokenBox, gravityContract, consuls, consulsPrivateKey),
-        CreateChangeBoxes(txB, boxFee, Configs.defaultTxFee, our))
+        CreateChangeBoxes(txB, boxFee, Configs.defaultTxFee, feeAddress))
       .fee(Configs.defaultTxFee)
-      .sendChangeTo(our.getErgoAddress)
+      .sendChangeTo(feeAddress.getErgoAddress)
       .build()
 
     val signed: SignedTransaction = prover.sign(tx)
@@ -290,10 +290,10 @@ object Gateway {
 
     val tx = txB.boxesToSpend(Seq(oracleTokenBox, boxFee).asJava)
       .outputs(createOracle(txB, oracleTokenBox, oracleContract, oracles, oraclesPrivateKey),
-        CreateChangeBoxes(txB, boxFee, Configs.defaultTxFee, our))
+        CreateChangeBoxes(txB, boxFee, Configs.defaultTxFee, feeAddress))
       .fee(Configs.defaultTxFee)
       .withDataInputs(Seq(gravityBox).asJava)
-      .sendChangeTo(our.getErgoAddress)
+      .sendChangeTo(feeAddress.getErgoAddress)
       .build()
 
     val signed: SignedTransaction = prover.sign(tx)
@@ -347,10 +347,10 @@ object Gateway {
 
     val tx = txB.boxesToSpend(Seq(pulseTokenBox, boxFee).asJava)
       .outputs(createPulse(txB, pulseTokenBox, pulseContract, oraclesPrivateKey),
-        CreateChangeBoxes(txB, boxFee, Configs.defaultTxFee, our))
+        CreateChangeBoxes(txB, boxFee, Configs.defaultTxFee, feeAddress))
       .fee(Configs.defaultTxFee)
       .withDataInputs(Seq(oracleBox).asJava)
-      .sendChangeTo(our.getErgoAddress)
+      .sendChangeTo(feeAddress.getErgoAddress)
       .build()
 
     val signed: SignedTransaction = prover.sign(tx)
@@ -659,7 +659,7 @@ object Gateway {
          |}""".stripMargin
 
 
-    val boxes = ctx.getCoveringBoxesFor(our, (1e9 * 1e8).toLong).getBoxes.asScala.toList.filter(box => box.getValue > 2 * Configs.defaultTxFee)
+    val boxes = ctx.getCoveringBoxesFor(feeAddress, (1e9 * 1e8).toLong).getBoxes.asScala.toList.filter(box => box.getValue > 2 * Configs.defaultTxFee)
     println(s"size: ${
       boxes.size
     }")
