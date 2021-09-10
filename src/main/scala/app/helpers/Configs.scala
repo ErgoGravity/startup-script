@@ -12,7 +12,7 @@ object Configs extends ConfigHelper {
   lazy val explorerUrl: String = if (explorerUrlConf.isEmpty) RestApiErgoClient.getDefaultExplorerUrl(Configs.networkType) else explorerUrlConf
   lazy val defaultTxFee: Long = readKey("default.fee").toLong
 
-  lazy val ourAddress: String = readKey("our.address")
+  lazy val feeAddress: String = readKey("fee.address")
   lazy val proverSecret: String = readKey("prover.secret")
 
   lazy val tokenRepoTokenId: String = readKey("tokenRepoToken.id")
