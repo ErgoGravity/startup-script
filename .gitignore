@@ -18,3 +18,5 @@ dist
 result_*/
 application_*.conf
 *.7z
+.metals/
+.vscode/
