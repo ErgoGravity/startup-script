@@ -1,6 +1,5 @@
 package app.startup
 import io.circe.Json
-import io.circe.parser.parse
 import app.helpers.{Configs, Explorer}
 import app.helpers.Configs.{explorerUrl, networkType, nodeApiKey, nodeUrl}
 import org.ergoplatform.appkit.{Address, BlockchainContext, ErgoClient, InputBox, RestApiErgoClient}
@@ -40,7 +39,6 @@ object Utils {
 
     ergoClient.execute((ctx: BlockchainContext) => {
       configs.proxy.toLowerCase match {
-        //        case "gateway" => test.main()
         case "gateway" => Gateway.run(ctx)
         case "susy" => Susy.run(ctx)
       }

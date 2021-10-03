@@ -15,7 +15,8 @@ dist
 /RUNNING_PID
 /.settings
 .DS_Store
-result_*/
+erg/
+sigma/
 application_*.conf
 *.7z
 .metals/
