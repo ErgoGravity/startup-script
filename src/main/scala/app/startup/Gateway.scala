@@ -19,8 +19,6 @@ import scala.collection.JavaConverters._
 
 object Gateway {
 
-  // TODO: Edit contract to be dynamic for number of consuls and oracles.
-
   val secureRandom = new java.security.SecureRandom
   val feeAddress = Address.create(Configs.feeAddress)
 
@@ -132,16 +130,16 @@ object Gateway {
     var total = 0L
     object AllDone extends Exception {}
 
-    while (total < 1000000000000L) {
+    while (total < 1200000000000L) {
       total = 0L
       for (box <- boxes) {
         total += box.getValue
         ergBox = box :: ergBox
-        if (total == 1000000000000L) {
+        if (total == 1200000000000L) {
           throw AllDone
         }
       }
-      if (total < 1000000000000L) {
+      if (total < 1200000000000L) {
         println("Not enough erg, waiting for more ergs ...")
         Thread.sleep(3 * 60 * 1000)
         ergBox = List()
@@ -156,7 +154,7 @@ object Gateway {
 
     def CreateTokenBox(txB: UnsignedTransactionBuilder, numToken: Long, tokenBox: InputBox, addressTokenRepo: Address) = {
       txB.outBoxBuilder
-        .value(1000000L * (numToken))
+        .value(Configs.defaultTxFee * (numToken))
         .tokens(new ErgoToken(tokenBox.getTokens.get(0).getId, numToken))
         .contract(new ErgoTreeContract(addressTokenRepo.getErgoAddress.script))
         .build()
@@ -170,7 +168,7 @@ object Gateway {
         .build()
 
       val changeFeeBox = txB.outBoxBuilder
-        .value(total - (1000000L * numToken * numTokenBox) - feeAmount)
+        .value(total - (Configs.defaultTxFee * numToken * numTokenBox) - feeAmount)
         .contract(new ErgoTreeContract(ownerAddress.getErgoAddress.script))
         .build()
 
@@ -328,7 +326,7 @@ object Gateway {
       val signs_z = ErgoValue.of(signs.map(sign => sign._2).toArray, ErgoType.bigIntType)
 
       val signalCreated = ErgoValue.of(1)
-      val dataType = ErgoValue.of(1)
+      val dataType = ErgoValue.of(2)
 
       txB.outBoxBuilder
         .value(tokenBox.getValue)
@@ -605,7 +603,8 @@ object Gateway {
          |         OUTPUTS(2).R4[Long].get == currentPulseId,
          |         // There must be data in the R5 of the signal box
          |         // TODO: this data must be equal to msgHash
-         |         OUTPUTS(2).R5[Coll[Byte]].isDefined
+         |         OUTPUTS(2).R5[Coll[Byte]].isDefined,
+         |         blake2b256(OUTPUTS(2).R5[Coll[Byte]].get) == msgHash
          |      ))
          |     }
          |     val checkOUTPUTS = {
@@ -658,11 +657,26 @@ object Gateway {
          | )))
          |}""".stripMargin
 
-
-    val boxes = ctx.getCoveringBoxesFor(feeAddress, (1e9 * 1e8).toLong).getBoxes.asScala.toList.filter(box => box.getValue > 2 * Configs.defaultTxFee)
+    var unspentBoxes = ctx.getCoveringBoxesFor(feeAddress, (1e9 * 1e8).toLong).getBoxes.asScala.toList
+    val unspent = unspentBoxes.filter(box => box.getTokens.size == 0 && box.getValue > 2 * Configs.defaultTxFee)
     println(s"size: ${
-      boxes.size
+      unspent.size
     }")
+
+    var spends = List[InputBox]()
+    val idList = Utils.findMempoolBox(feeAddress.getErgoAddress.toString)
+    print(idList)
+    for (box <- unspent) {
+      breakable {
+        for (id <- idList) {
+          if (id.equals(box.getId.toString)) {
+            spends = spends :+ box
+            break
+          }
+        }
+      }
+    }
+    var boxes = unspent.filterNot(spends.toSet)
 
     println("\n\t\t\tissuing gravityTokenId:")
     val (gravityTokenId, gravityTokenBox: InputBox) = issueNFTToken(prover, boxes.head, "Gravity_NFT", "Gravity Project: https://gravity.tech/")
@@ -672,6 +686,7 @@ object Gateway {
     val (pulseTokenId, pulseTokenBox: InputBox) = issueNFTToken(prover, boxes.drop(2).head, "Pulse_NFT", "Gravity Project: https://gravity.tech/")
     println("\n\t\t\tissuing tokenRepoTokenId:")
     val (tokenRepoTokenId, tokenRepoTokenBox: InputBox) = issueToken(prover, boxes.drop(3).head, "TokenRepo", "Gravity Project: https://gravity.tech/")
+
 
     val tokens = Map("gravityTokenId" -> gravityTokenId, "oracleTokenId" -> oracleTokenId, "pulseTokenId" -> pulseTokenId, "tokenRepoTokenId" -> tokenRepoTokenId)
     new PrintWriter("result_gateway/tokens.txt") {
@@ -731,14 +746,47 @@ object Gateway {
       gravityScript
     )
 
-    val feeBoxes = boxes.drop(4).filter(box => box.getTokens.size() == 0)
+    breakable {
+      while (true) {
+        try {
+          ctx.getBoxesById(gravityTokenBox.getId.toString).head
+          break
+        }
+        catch {
+          case e: Exception =>
+        }
+      }
+    }
+    val feeBoxes = boxes.drop(4)
 
     println("\n\t\t\tcreateGravityBox:")
     val gravityOut = createGravityBox(ctx, prover, feeBoxes.head, gravityContract, gravityTokenBox)
 
+    breakable {
+      while (true) {
+        try {
+          ctx.getBoxesById(gravityOut.getId.toString).head
+          break
+        }
+        catch {
+          case e: Exception =>
+        }
+      }
+    }
     println("\n\t\t\tcreateOracleBox:")
     val oracleOut = createOracleBox(ctx, prover, feeBoxes.drop(1).head, gravityOut, oracleContract, oracleTokenBox)
 
+    breakable {
+      while (true) {
+        try {
+          ctx.getBoxesById(oracleOut.getId.toString).head
+          break
+        }
+        catch {
+          case e: Exception =>
+        }
+      }
+    }
     println("\n\t\t\tcreatePulseBox:")
     createPulseBox(ctx, prover, feeBoxes.drop(2).head, oracleOut, pulseContract, pulseTokenBox)
 
